@@ -6,9 +6,25 @@
 #include <string>
 #include <vector>
 
-Map::Map()
+const char *dirToString(Direction dir)
 {
-    readFromFile(stdin);
+    switch (dir) {
+        case NORTH: return "North";
+        case SOUTH: return "South";
+        case WEST: return "West";
+        case EAST: return "East";
+        default: return "Unknown Direction";
+    }
+}
+
+Map::Map() :
+    player_one_x(0),
+    player_one_y(0),
+    player_two_x(0),
+    player_two_y(0),
+    map_width(0),
+    map_height(0)
+{
 }
 
 int Map::width() const
@@ -27,6 +43,56 @@ bool Map::isWall(int x, int y) const
         return true;
     } else {
         return is_wall[x][y];
+    }
+}
+
+bool Map::isWall(Direction dir, Player p) const
+{
+    int x, y;
+    switch (p) {
+        case SELF:
+            x = player_one_x;
+            y = player_one_y;
+            break;
+        case OPPONENT:
+            x = player_two_x;
+            y = player_two_y;
+            break;
+    }
+
+    switch (dir) {
+        case NORTH:
+            return isWall(x, y - 1);
+        case SOUTH:
+            return isWall(x, y + 1);
+        case WEST:
+            return isWall(x - 1, y);
+        case EAST:
+            return isWall(x + 1, y);
+    }
+}
+
+void Map::move(Direction dir, Player p)
+{
+    int *x, *y;
+    switch (p) {
+        case SELF:
+            x = &player_one_x;
+            y = &player_one_y;
+            break;
+        case OPPONENT:
+            x = &player_two_x;
+            y = &player_two_y;
+            break;
+    }
+
+    is_wall[*x][*y] = true;
+
+    switch (dir) {
+        case NORTH: (*y)--; break;
+        case SOUTH: (*y)++; break;
+        case WEST: (*x)--; break;
+        case EAST: (*x)++; break;
     }
 }
 

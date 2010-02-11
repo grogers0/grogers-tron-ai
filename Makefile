@@ -4,7 +4,9 @@
 # don't worry about it. Just use Visual C++ Express Edition or
 # Dev-C++ to work on your code.
 
-CXXFLAGS=-O2
+CXXFLAGS=-O2 -march=native
+
+all: MyTronBot
 
 MyTronBot: MyTronBot.o Map.o
 	g++ ${CXXFLAGS} -o MyTronBot MyTronBot.o Map.o

@@ -3,6 +3,9 @@
 // Handles the Tron map. Also handles communicating with the Tron game engine.
 // You don't need to change anything in this file.
 
+#ifndef MAP_H
+#define MAP_H
+
 #include <string>
 #include <vector>
 
@@ -11,14 +14,24 @@ enum Direction
     NORTH = 1, // negative y direction
     EAST = 2, // positive x direction
     SOUTH = 3, // positive y direction
-    WEST = 4 // negative x direction
+    WEST = 4, // negative x direction
+    DIR_MIN = NORTH,
+    DIR_MAX = WEST
 };
+
+const char *dirToString(Direction dir);
+
+enum Player
+{
+    SELF,
+    OPPONENT
+};
+
 
 class Map
 {
     public:
-        // Constructs a Map by reading an ASCII representation from the console
-        // (stdin).
+        // Constructs a default Map
         Map();
 
         // Returns the width of the Tron map.
@@ -31,6 +44,11 @@ class Map
         // a wall, FALSE means it's not a wall, and is passable. Any spaces that are
         // not on the board are deemed to be walls.
         bool isWall(int x, int y) const;
+
+        bool isWall(Direction dir, Player p = SELF) const;
+
+        void move(Direction dir, Player p = SELF);
+
 
         // Get my X and Y position. These are zero-based.
         int myX() const;
@@ -46,8 +64,6 @@ class Map
         //   * 3 -- South. Positive X direction.
         //   * 4 -- West. Negative X direction.
         static void sendMoveToServer(Direction move);
-
-    private:
 
         // Load a board from an open file handle. To read from the console,
         // pass stdin, which is actually a (FILE*).  file_handle -- an open
@@ -80,3 +96,5 @@ class Map
         // Map dimensions.
         int map_width, map_height;
 };
+
+#endif
