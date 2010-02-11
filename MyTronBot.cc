@@ -158,14 +158,13 @@ std::set<Direction> moveTowardsOpponent(const Map &map)
     int diffY = map.myY() - map.opponentY();
     std::set<Direction> ret;
 
-    if (abs(diffX) >= abs(diffY)) {
+    // only try to move towards them if they aren't right on our ass
+    if (abs(diffX) > 1 || abs(diffY) > 1) {
         if (diffX > 0)
             ret.insert(WEST);
         else if (diffX < 0)
             ret.insert(EAST);
-    }
 
-    if (abs(diffX) <= abs(diffY)) {
         if (diffY > 0)
             ret.insert(NORTH);
         else if (diffY < 0)
@@ -183,11 +182,25 @@ Direction whichMove(const Map& map)
     std::set<Direction> moves1 = moveBasedOnReachableSquares(map);
     std::set<Direction> moves2 = moveTowardsOpponent(map);
 
+    fprintf(stderr, "possible reachable square moves:");
+    for (std::set<Direction>::const_iterator it = moves1.begin(); it != moves1.end(); ++it)
+        fprintf(stderr, " %s", dirToString(*it));
+    fprintf(stderr, "\npossible towards opponent moves:");
+    for (std::set<Direction>::const_iterator it = moves2.begin(); it != moves2.end(); ++it)
+        fprintf(stderr, " %s", dirToString(*it));
+    fprintf(stderr, "\n");
+
+
     std::vector<Direction> intersection;
     std::set_intersection(moves1.begin(), moves1.end(),
             moves2.begin(), moves2.end(), std::back_inserter(intersection));
     if (intersection.empty())
         return *moves1.begin();
+
+    fprintf(stderr, "possible remainder moves:");
+    for (std::set<Direction>::const_iterator it = moves2.begin(); it != moves2.end(); ++it)
+        fprintf(stderr, " %s", dirToString(*it));
+    fprintf(stderr, "\n");
 
     return *intersection.begin();
 }
