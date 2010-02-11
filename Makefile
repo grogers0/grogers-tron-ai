@@ -8,14 +8,13 @@ CXXFLAGS=-O2 -march=native
 
 all: MyTronBot
 
-MyTronBot: MyTronBot.o Map.o
-	g++ ${CXXFLAGS} -o MyTronBot MyTronBot.o Map.o
+OBJECTS = MyTronBot.o Map.o OpponentIsolated.o ReachableSquares.o
 
-MyTronBot.o: MyTronBot.cc
-	g++ ${CXXFLAGS} -c -o MyTronBot.o MyTronBot.cc
+MyTronBot: ${OBJECTS}
+	g++ ${CXXFLAGS} -o MyTronBot ${OBJECTS}
 
-Map.o: Map.cc
-	g++ ${CXXFLAGS} -c -o Map.o Map.cc
+%.o: %.cc
+	g++ ${CXXFLAGS} -c $<
 
 clean:
 	rm -f *.o MyTronBot

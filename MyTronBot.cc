@@ -3,148 +3,13 @@
 // This is the code file that you will modify in order to create your entry.
 
 #include "Map.h"
-#include <string>
+#include "MoveDeciders.h"
 #include <vector>
 #include <cstdio>
-#include <cstdlib>
 #include <set>
 #include <iterator>
 #include <algorithm>
 
-size_t floodFill(std::vector<std::vector<bool> > &board, int x, int y,
-        int width, int height)
-{
-    size_t ret = 1;
-
-    board[x][y] = true;
-
-    if (x > 0 && !board[x - 1][y])
-        ret += floodFill(board, x - 1, y, width, height);
-
-    if (x < width - 1 && !board[x + 1][y])
-        ret += floodFill(board, x + 1, y, width, height);
-
-    if (y > 0 && !board[x][y - 1])
-        ret += floodFill(board, x, y - 1, width, height);
-
-    if (y < height - 1 && !board[x][y + 1])
-        ret += floodFill(board, x, y + 1, width, height);
-
-    return ret;
-}
-
-size_t reachableSquares(const Map &map, Player player)
-{
-    int width = map.width();
-    int height = map.height();
-    std::vector<std::vector<bool> > board(width, std::vector<bool>(height));
-
-    int x, y;
-    switch (player) {
-        case SELF:
-            x = map.myX();
-            y = map.myY();
-            break;
-        case OPPONENT:
-            x = map.opponentX();
-            y = map.opponentY();
-            break;
-    }
-
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < height; ++j) {
-            board[i][j] = map.isWall(i, j);
-        }
-    }
-
-    return floodFill(board, x, y, width, height);
-}
-
-std::set<Direction> moveBasedOnReachableSquares(const Map &map)
-{
-   size_t bestReachable = 0;
-
-    std::set<Direction> bestDirs;
-
-    for (Direction dir = DIR_MIN; dir <= DIR_MAX;
-            dir = static_cast<Direction>(dir + 1)) {
-        if (!map.isWall(dir, SELF)) {
-            Map newMap(map);
-            newMap.move(dir, SELF);
-            size_t reachable = reachableSquares(newMap, SELF);
-            fprintf(stderr, "Move %s has %u reachable squares\n", dirToString(dir), reachable);
-            if (reachable > bestReachable) {
-                bestDirs.clear();
-                bestDirs.insert(dir);
-                bestReachable = reachable;
-            } else if (reachable == bestReachable) {
-                bestDirs.insert(dir);
-            }
-        }
-    }
-
-    return bestDirs;
-}
-
-
-bool floodFillReachesOpponent(std::vector<std::vector<bool> > &board,
-        int x, int y, int width, int height, int oppX, int oppY)
-{
-    if (x == oppX && y == oppY)
-        return true;
-
-    board[x][y] = true;
-
-    if (x > 0 && !board[x - 1][y] &&
-            floodFillReachesOpponent(board, x - 1, y, width, height, oppX, oppY))
-        return true;
-
-    if (x < width - 1 && !board[x + 1][y] &&
-            floodFillReachesOpponent(board, x + 1, y, width, height, oppX, oppY))
-        return true;
-
-    if (y > 0 && !board[x][y - 1] &&
-            floodFillReachesOpponent(board, x, y - 1, width, height, oppX, oppY))
-        return true;
-
-    if (y < height - 1 && !board[x][y + 1] &&
-            floodFillReachesOpponent(board, x, y + 1, width, height, oppX, oppY))
-            return true;
-
-    return false;
-}
-
-
-bool isOpponentIsolated(const Map &map)
-{
-    for (Direction dir = DIR_MIN; dir <= DIR_MAX;
-            dir = static_cast<Direction>(dir + 1)) {
-        if (!map.isWall(dir, SELF)) {
-            Map newMap(map);
-            newMap.move(dir, SELF);
-
-            int width = newMap.width();
-            int height = newMap.height();
-            std::vector<std::vector<bool> > board(width, std::vector<bool>(height));
-
-            for (int i = 0; i < width; ++i) {
-                for (int j = 0; j < height; ++j) {
-                    board[i][j] = newMap.isWall(i, j);
-                }
-            }
-            // allow us to reach the opponent
-            board[newMap.opponentX()][newMap.opponentY()] = false;
-
-            if (floodFillReachesOpponent(board, newMap.myX(), newMap.myY(),
-                        width, height, newMap.opponentX(), newMap.opponentY()))
-            {
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
 
 std::set<Direction> moveTowardsOpponent(const Map &map)
 {
@@ -178,10 +43,13 @@ std::set<Direction> moveTowardsOpponent(const Map &map)
 
 Direction whichMove(const Map& map)
 {
+    if (isOpponentIsolated(map))
+        return decideMoveIsolatedFromOpponent(map);
+
     int x = map.myX();
     int y = map.myY();
 
-    std::set<Direction> moves1 = moveBasedOnReachableSquares(map);
+    std::set<Direction> moves1 = getPossibleMovesReachableSquares(map);
     std::set<Direction> moves2 = moveTowardsOpponent(map);
 
     fprintf(stderr, "Possible reachable square moves:");
