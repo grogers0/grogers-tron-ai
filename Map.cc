@@ -167,7 +167,7 @@ void Map::readFromFile(FILE *file_handle)
                     fprintf(stderr, "x >= width in Board_ReadFromStream\n");
                     return;
                 }
-                is_wall[x][y] = false;
+                is_wall[x][y] = true;
                 player_one_x = x;
                 player_one_y = y;
                 ++x;
@@ -177,7 +177,7 @@ void Map::readFromFile(FILE *file_handle)
                     fprintf(stderr, "x >= width in Board_ReadFromStream\n");
                     return;
                 }
-                is_wall[x][y] = false;
+                is_wall[x][y] = true;
                 player_two_x = x;
                 player_two_y = y;
                 ++x;

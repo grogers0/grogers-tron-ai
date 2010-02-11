@@ -132,6 +132,8 @@ bool isOpponentIsolated(const Map &map)
                     board[i][j] = newMap.isWall(i, j);
                 }
             }
+            // allow us to reach the opponent
+            board[newMap.opponentX()][newMap.opponentY()] = false;
 
             if (floodFillReachesOpponent(board, newMap.myX(), newMap.myY(),
                         width, height, newMap.opponentX(), newMap.opponentY()))
@@ -182,10 +184,10 @@ Direction whichMove(const Map& map)
     std::set<Direction> moves1 = moveBasedOnReachableSquares(map);
     std::set<Direction> moves2 = moveTowardsOpponent(map);
 
-    fprintf(stderr, "possible reachable square moves:");
+    fprintf(stderr, "Possible reachable square moves:");
     for (std::set<Direction>::const_iterator it = moves1.begin(); it != moves1.end(); ++it)
         fprintf(stderr, " %s", dirToString(*it));
-    fprintf(stderr, "\npossible towards opponent moves:");
+    fprintf(stderr, "\nPossible towards opponent moves:");
     for (std::set<Direction>::const_iterator it = moves2.begin(); it != moves2.end(); ++it)
         fprintf(stderr, " %s", dirToString(*it));
     fprintf(stderr, "\n");
@@ -197,8 +199,8 @@ Direction whichMove(const Map& map)
     if (intersection.empty())
         return *moves1.begin();
 
-    fprintf(stderr, "possible remainder moves:");
-    for (std::set<Direction>::const_iterator it = moves2.begin(); it != moves2.end(); ++it)
+    fprintf(stderr, "Possible remainder moves:");
+    for (std::vector<Direction>::const_iterator it = intersection.begin(); it != intersection.end(); ++it)
         fprintf(stderr, " %s", dirToString(*it));
     fprintf(stderr, "\n");
 
