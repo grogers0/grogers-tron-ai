@@ -8,7 +8,8 @@ CXXFLAGS=-O2 -march=native
 
 all: MyTronBot
 
-OBJECTS = MyTronBot.o Map.o OpponentIsolated.o ReachableSquares.o
+OBJECTS = MyTronBot.o Map.o OpponentIsolated.o ReachableSquares.o \
+          GameTree.o
 
 MyTronBot: ${OBJECTS}
 	g++ ${CXXFLAGS} -o MyTronBot ${OBJECTS}

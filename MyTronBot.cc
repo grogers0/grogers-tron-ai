@@ -15,11 +15,11 @@ std::set<Direction> moveTowardsOpponent(const Map &map)
 {
     // don't care what direction the opponent is in if we can't reach them
     if (isOpponentIsolated(map)) {
-        fprintf(stderr, "Opponent is isolated, do not move towards them\n");
+        //fprintf(stderr, "Opponent is isolated, do not move towards them\n");
         return std::set<Direction>();
     }
 
-    fprintf(stderr, "Opponent is reachable, try to move towards them\n");
+    //fprintf(stderr, "Opponent is reachable, try to move towards them\n");
 
     int diffX = map.myX() - map.opponentX();
     int diffY = map.myY() - map.opponentY();
@@ -52,25 +52,14 @@ Direction whichMove(const Map& map)
     std::set<Direction> moves1 = getPossibleMovesReachableSquares(map);
     std::set<Direction> moves2 = moveTowardsOpponent(map);
 
-    fprintf(stderr, "Possible reachable square moves:");
-    for (std::set<Direction>::const_iterator it = moves1.begin(); it != moves1.end(); ++it)
-        fprintf(stderr, " %s", dirToString(*it));
-    fprintf(stderr, "\nPossible towards opponent moves:");
-    for (std::set<Direction>::const_iterator it = moves2.begin(); it != moves2.end(); ++it)
-        fprintf(stderr, " %s", dirToString(*it));
-    fprintf(stderr, "\n");
-
-
     std::vector<Direction> intersection;
     std::set_intersection(moves1.begin(), moves1.end(),
             moves2.begin(), moves2.end(), std::back_inserter(intersection));
     if (intersection.empty())
         return *moves1.begin();
 
-    fprintf(stderr, "Possible remainder moves:");
-    for (std::vector<Direction>::const_iterator it = intersection.begin(); it != intersection.end(); ++it)
-        fprintf(stderr, " %s", dirToString(*it));
-    fprintf(stderr, "\n");
+    if (intersection.empty())
+        return NORTH;
 
     return *intersection.begin();
 }
@@ -85,7 +74,7 @@ int main()
     {
         map.readFromFile(stdin);
         Direction dir = whichMove(map);
-        fprintf(stderr, "Moving %s\n", dirToString(dir));
+        //fprintf(stderr, "Moving %s\n", dirToString(dir));
         Map::sendMoveToServer(dir);
     }
     return 0;

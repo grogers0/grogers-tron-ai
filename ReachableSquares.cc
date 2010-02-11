@@ -62,7 +62,6 @@ std::set<Direction> getPossibleMovesReachableSquares(const Map &map)
             Map newMap(map);
             newMap.move(dir, SELF);
             size_t reachable = countReachableSquares(newMap, SELF);
-            fprintf(stderr, "Move %s has %u reachable squares\n", dirToString(dir), reachable);
             if (reachable > bestReachable) {
                 bestDirs.clear();
                 bestDirs.insert(dir);

@@ -81,6 +81,9 @@ Direction decideMoveIsolatedFromOpponent(const Map &map)
             return *it;
     }
 
+    if (moves.empty())
+        return NORTH;
+
     return *moves.begin();
 }
 
