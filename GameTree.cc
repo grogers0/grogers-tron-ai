@@ -1,9 +1,14 @@
 #include "MoveDeciders.h"
 #include <climits>
 #include <cstdio>
+#include <cstdlib>
 #include <sys/time.h>
+#include <deque>
 
-typedef int (*HeuristicFunction)(const Map &map, Direction dir);
+static Direction disambiguateBestMoves(const std::deque<Direction> &moves,
+        const Map &map);
+
+typedef int (*HeuristicFunction)(const Map &map, Direction dir, Player p);
 
 class GameTree
 {
@@ -123,8 +128,10 @@ int GameTree::negamax(Node *node, int depth, int alpha, int beta, int color,
         Direction *dir, HeuristicFunction fun)
 {
     if (depth == 0 || node->children[0] == NULL) {
-        return color * fun(node->map, node->direction);
+        return color * fun(node->map, node->direction, colorToPlayer(color));
     }
+
+    std::deque<Direction> bestMoves;
 
     for (int i = 0; i < 4 && node->children[i]; ++i) {
         int newAlpha = -negamax(node->children[i], depth - 1, -beta, -alpha,
@@ -137,42 +144,40 @@ int GameTree::negamax(Node *node, int depth, int alpha, int beta, int color,
         */
 
         if (newAlpha > alpha) {
-            if (dir)
-                *dir = node->children[i]->direction;
+            if (dir) {
+                bestMoves.clear();
+                bestMoves.push_back(node->children[i]->direction);
+            }
+
             std::swap(node->children[0], node->children[i]); // for subsequent runs more pruning
             alpha = newAlpha;
+        } else if (newAlpha == alpha) {
+            if (dir) {
+                bestMoves.push_back(node->children[i]->direction);
+            }
         }
 
         if (alpha >= beta)
             break;
     }
 
+    if (dir) {
+        *dir = disambiguateBestMoves(bestMoves, node->map);
+    }
+
     return alpha;
 }
 
-// todo - make this so that when far away, the effect is small, but when closer
-// the effect is greater
-static int isDirectionTowardsOtherPlayer(const Map &map, Direction dir)
+static int isPlayerCloseToEnemy(const Map &map)
 {
-    int diffX, diffY;
+    int diffX = map.myX() - map.enemyX();
+    int diffY = map.myY() - map.enemyY();
 
-    diffX = map.myX() - map.enemyX();
-    diffY = map.myY() - map.enemyY();
-
-    if (diffX > 0 && dir == WEST)
-        return true;
-    if (diffX < 0 && dir == EAST)
-        return true;
-
-    if (diffY > 0 && dir == NORTH)
-        return true;
-    if (diffY < 0 && dir == SOUTH)
-        return true;
-
-    return false;
+    return map.width()*map.width() + map.height()*map.height() -
+        diffX*diffX - diffY*diffY;
 }
 
-static bool isPlayerHuggingWall(const Map &map)
+static bool isPlayerWallHugging(Map map)
 {
     int x = map.myX();
     int y = map.myY();
@@ -191,7 +196,7 @@ static bool isPlayerHuggingWall(const Map &map)
     return cnt >= 2;
 }
 
-static int fitness(const Map &map, Direction dir)
+static int fitness(const Map &map, Direction dir, Player currentPlayer)
 {
     int cntPlayer = countReachableSquares(map, SELF);
     int cntEnemy = countReachableSquares(map, ENEMY);
@@ -206,10 +211,32 @@ static int fitness(const Map &map, Direction dir)
         return 0; // draw
 
     int reachableMovesAdvantage = cntPlayer - cntEnemy;
-    //int towardsEnemy = isDirectionTowardsOtherPlayer(map, dir);
-    //int huggingWall = isPlayerHuggingWall(map);
+    return reachableMovesAdvantage;
+}
 
-    return reachableMovesAdvantage; // + 2*towardsEnemy + huggingWall;
+static Direction disambiguateBestMoves(const std::deque<Direction> &moves,
+        const Map &map)
+{
+    Direction bestDir = NORTH;
+    int bestFit = -INT_MAX;
+
+    for (std::deque<Direction>::const_iterator it = moves.begin();
+            it != moves.end(); ++it) {
+        Map newMap(map);
+        newMap.move(*it, SELF);
+
+        int towardsEnemy = isPlayerCloseToEnemy(newMap);
+        int wallHug = isPlayerWallHugging(newMap);
+
+        int fit = towardsEnemy + wallHug*100;
+
+        if (fit > bestFit) {
+            bestFit = fit;
+            bestDir = *it;
+        }
+    }
+
+    return bestDir;
 }
 
 static double tvtod(const timeval &tv)
