@@ -38,29 +38,29 @@ class Map
         Map();
 
         // Returns the width of the Tron map.
-        int width() const;
+        int width() const { return map_width; }
 
         // Returns the height of the Tron map.
-        int height() const;
+        int height() const { return map_height; }
 
         // Returns whether or not the given cell is a wall or not. TRUE means it's
         // a wall, FALSE means it's not a wall, and is passable. Any spaces that are
         // not on the board are deemed to be walls.
-        bool isWall(int x, int y) const;
+        bool isWall(int x, int y) const { return is_wall[x][y]; }
 
-        bool isWall(Direction dir, Player p = SELF) const;
+        bool isWall(Direction dir, Player p) const;
 
-        void move(Direction dir, Player p = SELF);
+        void move(Direction dir, Player p, bool halfMove = false);
 
         void print() const;
 
         // Get my X and Y position. These are zero-based.
-        int myX() const;
-        int myY() const;
+        int myX() const { return player_one_x; }
+        int myY() const { return player_one_y; }
 
         // Get the opponent's X and Y position. These are zero-based.
-        int enemyX() const;
-        int enemyY() const;
+        int enemyX() const { return player_two_x; }
+        int enemyY() const { return player_two_y; }
 
         // Sends your move to the contest engine. The four possible moves are
         //   * 1 -- North. Negative Y direction.

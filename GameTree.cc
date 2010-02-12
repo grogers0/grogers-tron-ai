@@ -3,8 +3,6 @@
 #include <cstdio>
 #include <sys/time.h>
 
-const int MAX_DEPTH = 9;
-
 typedef int (*HeuristicFunction)(const Map &map, Direction dir);
 
 class GameTree
@@ -15,9 +13,12 @@ class GameTree
 
         Direction decideMove(int depth, HeuristicFunction fun);
 
+        void extendTree(const Map &map, int plies);
+
     private:
         struct Node;
         void buildTree(Node *node, int plies, Player player);
+        void extendTree(Node *node, int plies, Player player);
         int negamax(Node *node, int depth, int alpha, int beta, int color,
                 Direction *dir, HeuristicFunction fun);
         void destroySubtree(Node *node);
@@ -57,7 +58,8 @@ static Player colorToPlayer(int color)
 Direction GameTree::decideMove(int depth, HeuristicFunction fun)
 {
     Direction ret = NORTH;
-    negamax(&root, depth, -INT_MAX, INT_MAX, 1, &ret, fun);
+    int alpha = negamax(&root, depth, -INT_MAX, INT_MAX, 1, &ret, fun);
+    fprintf(stderr, "Negamax returned alpha: %d\n", alpha);
     return ret;
 }
 
@@ -66,7 +68,7 @@ void GameTree::buildTree(Node *node, int plies, Player player)
     for (int i = 0; i < 4; ++i)
         node->children[i] = NULL;
 
-    if (plies < 0)
+    if (plies <= 0)
         return;
 
     int cnt = 0;
@@ -78,13 +80,34 @@ void GameTree::buildTree(Node *node, int plies, Player player)
         node->children[cnt] = new Node;
         node->children[cnt]->direction = dir;
         node->children[cnt]->map = node->map;
-        node->children[cnt]->map.move(dir, player);
+        node->children[cnt]->map.move(dir, player, player == SELF);
 
         buildTree(node->children[cnt], plies - 1, otherPlayer(player));
 
         ++cnt;
     }
 }
+
+void GameTree::extendTree(const Map &map, int plies)
+{
+    extendTree(&root, plies, SELF);
+}
+
+void GameTree::extendTree(Node *node, int plies, Player player)
+{
+    if (plies <= 0)
+        return;
+
+    if (!node->children[0]) {
+        buildTree(node, plies, player);
+        return;
+    }
+
+    for (int i = 0; i < 4 && node->children[i]; ++i) {
+        extendTree(node->children[i], plies - 1, otherPlayer(player));
+    }
+}
+
 
 void GameTree::destroySubtree(Node *node)
 {
@@ -106,15 +129,17 @@ int GameTree::negamax(Node *node, int depth, int alpha, int beta, int color,
     for (int i = 0; i < 4 && node->children[i]; ++i) {
         int newAlpha = -negamax(node->children[i], depth - 1, -beta, -alpha,
                 -color, NULL, fun);
-/*
-        for (int j = 0; j < MAX_DEPTH - depth; ++j)
-            fprintf(stderr, "    ");
+
+        /*
+        for (int j = 0; j < 20 - depth; ++j)
+            fprintf(stderr, "  ");
         fprintf(stderr, "depth: %d, %s %s, alpha: %d, newalpha: %d, beta: %d\n", depth, playerToString(colorToPlayer(color)), dirToString(node->children[i]->direction), alpha, newAlpha, beta);
         */
 
         if (newAlpha > alpha) {
             if (dir)
                 *dir = node->children[i]->direction;
+            std::swap(node->children[0], node->children[i]); // for subsequent runs more pruning
             alpha = newAlpha;
         }
 
@@ -177,6 +202,8 @@ static int fitness(const Map &map, Direction dir)
         return INT_MAX; // player won
     else if (cntPlayer == 0 && cntEnemy == 0)
         return 0; // draw
+    else if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
+        return 0; // draw
 
     int reachableMovesAdvantage = cntPlayer - cntEnemy;
     //int towardsEnemy = isDirectionTowardsOtherPlayer(map, dir);
@@ -185,22 +212,34 @@ static int fitness(const Map &map, Direction dir)
     return reachableMovesAdvantage; // + 2*towardsEnemy + huggingWall;
 }
 
+static double tvtod(const timeval &tv)
+{
+    return double(tv.tv_sec) + double(tv.tv_usec)/1e6;
+}
+
 Direction decideMoveMinimax(const Map &map)
 {
-    timeval ts, te;
-    gettimeofday(&ts, NULL);
+    timeval tv;
+    gettimeofday(&tv, NULL);
+    double tstart = tvtod(tv);
 
-    int depth = MAX_DEPTH;
-    GameTree tree(map, depth);
+    GameTree tree(map, 0);
 
-    Direction dir = tree.decideMove(depth, &fitness);
+    double tincr = 0, ttot = 0.0;
+    Direction dir = NORTH;
+    for (int depth = 1; ttot + tincr*3.0 < 0.95; ++depth) {
+        gettimeofday(&tv, NULL);
+        double tincrstart = tvtod(tv);
 
-    gettimeofday(&te, NULL);
+        tree.extendTree(map, depth);
+        dir = tree.decideMove(depth, &fitness);
 
-    timeval tdiff;
-    timersub(&te, &ts, &tdiff);
+        gettimeofday(&tv, NULL);
+        tincr = tvtod(tv) - tincrstart;
+        ttot = tvtod(tv) - tstart;
 
-    fprintf(stderr, "finding move %s took %d sec, %d usec\n", dirToString(dir), tdiff.tv_sec, tdiff.tv_usec);
+        fprintf(stderr, "at depth %d, finding move %s took %f incr sec, %f total sec\n", depth, dirToString(dir), tincr, ttot);
+    }
 
     return dir;
 }

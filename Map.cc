@@ -45,25 +45,6 @@ Map::Map() :
 {
 }
 
-int Map::width() const
-{
-    return map_width;
-}
-
-int Map::height()  const
-{
-    return map_height;
-}
-
-bool Map::isWall(int x, int y) const
-{
-    if (x < 0 || y < 0 || x >= map_width || y >= map_height) {
-        return true;
-    } else {
-        return is_wall[x][y];
-    }
-}
-
 bool Map::isWall(Direction dir, Player p) const
 {
     int x, y;
@@ -90,7 +71,7 @@ bool Map::isWall(Direction dir, Player p) const
     }
 }
 
-void Map::move(Direction dir, Player p)
+void Map::move(Direction dir, Player p, bool halfMove)
 {
     int *x, *y;
     switch (p) {
@@ -111,7 +92,10 @@ void Map::move(Direction dir, Player p)
         case EAST: (*x)++; break;
     }
 
-    is_wall[*x][*y] = true;
+    if (!halfMove) {
+        is_wall[player_one_x][player_one_y] = true;
+        is_wall[player_two_x][player_two_y] = true;
+    }
 }
 
 void Map::print() const
@@ -130,26 +114,6 @@ void Map::print() const
 
         fprintf(stderr, "\n");
     }
-}
-
-int Map::myX() const
-{
-    return player_one_x;
-}
-
-int Map::myY() const
-{
-    return player_one_y;
-}
-
-int Map::enemyX() const
-{
-    return player_two_x;
-}
-
-int Map::enemyY() const
-{
-    return player_two_y;
 }
 
 void Map::sendMoveToServer(Direction move)

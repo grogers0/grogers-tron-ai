@@ -68,7 +68,7 @@ Direction decideMoveIsolatedFromOpponent(const Map &map)
     for (std::set<Direction>::const_iterator it = moves.begin();
             it != moves.end(); ++it) {
         Map newMap(map);
-        newMap.move(*it);
+        newMap.move(*it, SELF);
 
         size_t cnt = 0;
         for (Direction dir = DIR_MIN; dir <= DIR_MAX;
