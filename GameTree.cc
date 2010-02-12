@@ -173,8 +173,10 @@ static int isPlayerCloseToEnemy(const Map &map)
     int diffX = map.myX() - map.enemyX();
     int diffY = map.myY() - map.enemyY();
 
-    return map.width()*map.width() + map.height()*map.height() -
+    int distance = map.width()*map.width() + map.height()*map.height() -
         diffX*diffX - diffY*diffY;
+
+    return distance;
 }
 
 static bool isPlayerWallHugging(Map map)
@@ -228,7 +230,7 @@ static Direction disambiguateBestMoves(const std::deque<Direction> &moves,
         int towardsEnemy = isPlayerCloseToEnemy(newMap);
         int wallHug = isPlayerWallHugging(newMap);
 
-        int fit = towardsEnemy + wallHug*100;
+        int fit = towardsEnemy + wallHug;
 
         if (fit > bestFit) {
             bestFit = fit;
