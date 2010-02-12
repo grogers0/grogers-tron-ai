@@ -208,9 +208,9 @@ static int fitness(const Map &map, Direction dir, Player currentPlayer)
     else if (cntPlayer > 0 && cntEnemy == 0)
         return INT_MAX; // player won
     else if (cntPlayer == 0 && cntEnemy == 0)
-        return 0; // draw
+        return -1; // draw
     else if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
-        return 0; // draw
+        return -1; // draw
 
     int reachableMovesAdvantage = cntPlayer - cntEnemy;
     return reachableMovesAdvantage;
