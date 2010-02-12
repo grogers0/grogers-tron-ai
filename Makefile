@@ -6,16 +6,18 @@
 
 CXXFLAGS=-O2 -march=native
 
-all: MyTronBot
+all: MyTronBot Replay
 
-OBJECTS = MyTronBot.o Map.o OpponentIsolated.o ReachableSquares.o \
-          GameTree.o
+OBJECTS = Map.o OpponentIsolated.o ReachableSquares.o GameTree.o
 
-MyTronBot: ${OBJECTS}
-	g++ ${CXXFLAGS} -o MyTronBot ${OBJECTS}
+MyTronBot: ${OBJECTS} MyTronBot.o
+	g++ ${CXXFLAGS} -o MyTronBot ${OBJECTS} MyTronBot.o
+
+Replay: ${OBJECTS} Replay.o
+	g++ ${CXXFLAGS} -o Replay ${OBJECTS} Replay.o
 
 %.o: %.cc
 	g++ ${CXXFLAGS} -c $<
 
 clean:
-	rm -f *.o MyTronBot
+	rm -f *.o MyTronBot Replay
