@@ -24,8 +24,11 @@ const char *dirToString(Direction dir);
 enum Player
 {
     SELF,
-    OPPONENT
+    ENEMY
 };
+
+Player otherPlayer(Player);
+const char *playerToString(Player p);
 
 
 class Map
@@ -49,14 +52,15 @@ class Map
 
         void move(Direction dir, Player p = SELF);
 
+        void print() const;
 
         // Get my X and Y position. These are zero-based.
         int myX() const;
         int myY() const;
 
         // Get the opponent's X and Y position. These are zero-based.
-        int opponentX() const;
-        int opponentY() const;
+        int enemyX() const;
+        int enemyY() const;
 
         // Sends your move to the contest engine. The four possible moves are
         //   * 1 -- North. Negative Y direction.

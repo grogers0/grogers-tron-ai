@@ -17,6 +17,24 @@ const char *dirToString(Direction dir)
     }
 }
 
+Player otherPlayer(Player p)
+{
+    if (p == SELF)
+        return ENEMY;
+    else
+        return SELF;
+}
+
+const char *playerToString(Player p)
+{
+    switch (p) {
+        case SELF: return "Self";
+        case ENEMY: return "Enemy";
+        default: return "Unknown Player";
+    }
+}
+
+
 Map::Map() :
     player_one_x(0),
     player_one_y(0),
@@ -54,7 +72,7 @@ bool Map::isWall(Direction dir, Player p) const
             x = player_one_x;
             y = player_one_y;
             break;
-        case OPPONENT:
+        case ENEMY:
             x = player_two_x;
             y = player_two_y;
             break;
@@ -80,19 +98,37 @@ void Map::move(Direction dir, Player p)
             x = &player_one_x;
             y = &player_one_y;
             break;
-        case OPPONENT:
+        case ENEMY:
             x = &player_two_x;
             y = &player_two_y;
             break;
     }
-
-    is_wall[*x][*y] = true;
 
     switch (dir) {
         case NORTH: (*y)--; break;
         case SOUTH: (*y)++; break;
         case WEST: (*x)--; break;
         case EAST: (*x)++; break;
+    }
+
+    is_wall[*x][*y] = true;
+}
+
+void Map::print() const
+{
+    for (int y = 0; y < map_height; ++y) {
+        for (int x = 0; x < map_width; ++x) {
+            if (player_one_x == x && player_one_y == y)
+                fprintf(stderr, "1");
+            else if (player_two_x == x && player_two_y == y)
+                fprintf(stderr, "2");
+            else if (is_wall[x][y])
+                fprintf(stderr, "#");
+            else
+                fprintf(stderr, " ");
+        }
+
+        fprintf(stderr, "\n");
     }
 }
 
@@ -106,12 +142,12 @@ int Map::myY() const
     return player_one_y;
 }
 
-int Map::opponentX() const
+int Map::enemyX() const
 {
     return player_two_x;
 }
 
-int Map::opponentY() const
+int Map::enemyY() const
 {
     return player_two_y;
 }

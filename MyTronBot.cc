@@ -21,8 +21,8 @@ std::set<Direction> moveTowardsOpponent(const Map &map)
 
     //fprintf(stderr, "Opponent is reachable, try to move towards them\n");
 
-    int diffX = map.myX() - map.opponentX();
-    int diffY = map.myY() - map.opponentY();
+    int diffX = map.myX() - map.enemyX();
+    int diffY = map.myY() - map.enemyY();
     std::set<Direction> ret;
 
     // only try to move towards them if they aren't right on our ass
@@ -45,6 +45,8 @@ Direction whichMove(const Map& map)
 {
     if (isOpponentIsolated(map))
         return decideMoveIsolatedFromOpponent(map);
+
+    return decideMoveMinimax(map);
 
     int x = map.myX();
     int y = map.myY();

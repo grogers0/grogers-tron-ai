@@ -35,9 +35,9 @@ size_t countReachableSquares(const Map &map, Player player)
             x = map.myX();
             y = map.myY();
             break;
-        case OPPONENT:
-            x = map.opponentX();
-            y = map.opponentY();
+        case ENEMY:
+            x = map.enemyX();
+            y = map.enemyY();
             break;
     }
 
@@ -47,7 +47,7 @@ size_t countReachableSquares(const Map &map, Player player)
         }
     }
 
-    return floodFill(board, x, y, width, height);
+    return floodFill(board, x, y, width, height) - 1;
 }
 
 std::set<Direction> getPossibleMovesReachableSquares(const Map &map)

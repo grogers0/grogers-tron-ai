@@ -48,10 +48,10 @@ bool isOpponentIsolated(const Map &map)
                 }
             }
             // allow us to reach the opponent
-            board[newMap.opponentX()][newMap.opponentY()] = false;
+            board[newMap.enemyX()][newMap.enemyY()] = false;
 
             if (floodFillReachesOpponent(board, newMap.myX(), newMap.myY(),
-                        width, height, newMap.opponentX(), newMap.opponentY()))
+                        width, height, newMap.enemyX(), newMap.enemyY()))
             {
                 return false;
             }
