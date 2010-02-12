@@ -46,7 +46,7 @@ class Map
         // Returns whether or not the given cell is a wall or not. TRUE means it's
         // a wall, FALSE means it's not a wall, and is passable. Any spaces that are
         // not on the board are deemed to be walls.
-        bool isWall(int x, int y) const { return is_wall[x][y]; }
+        bool isWall(int x, int y) const { return is_wall[x*map_height + y]; }
 
         bool isWall(Direction dir, Player p) const;
 
@@ -91,7 +91,7 @@ class Map
 
     private:
         // Indicates whether or not each cell in the board is passable.
-        std::vector<std::vector<bool> > is_wall;
+        std::vector<bool> is_wall;
 
         // The locations of both players.
         int player_one_x, player_one_y;

@@ -1,23 +1,23 @@
 #include "MoveDeciders.h"
 #include <cstdio>
 
-size_t floodFill(std::vector<std::vector<bool> > &board, int x, int y,
+static size_t floodFill(std::vector<bool> &board, int x, int y,
         int width, int height)
 {
     size_t ret = 1;
 
-    board[x][y] = true;
+    board[x*height + y] = true;
 
-    if (x > 0 && !board[x - 1][y])
+    if (x > 0 && !board[(x - 1)*height + y])
         ret += floodFill(board, x - 1, y, width, height);
 
-    if (x < width - 1 && !board[x + 1][y])
+    if (x < width - 1 && !board[(x + 1)*height + y])
         ret += floodFill(board, x + 1, y, width, height);
 
-    if (y > 0 && !board[x][y - 1])
+    if (y > 0 && !board[x*height + (y - 1)])
         ret += floodFill(board, x, y - 1, width, height);
 
-    if (y < height - 1 && !board[x][y + 1])
+    if (y < height - 1 && !board[x*height + (y + 1)])
         ret += floodFill(board, x, y + 1, width, height);
 
     return ret;
@@ -27,7 +27,7 @@ size_t countReachableSquares(const Map &map, Player player)
 {
     int width = map.width();
     int height = map.height();
-    std::vector<std::vector<bool> > board(width, std::vector<bool>(height));
+    std::vector<bool> board(width*height);
 
     int x, y;
     switch (player) {
@@ -43,7 +43,7 @@ size_t countReachableSquares(const Map &map, Player player)
 
     for (int i = 0; i < width; ++i) {
         for (int j = 0; j < height; ++j) {
-            board[i][j] = map.isWall(i, j);
+            board[i*height + j] = map.isWall(i, j);
         }
     }
 
