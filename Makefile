@@ -5,16 +5,17 @@
 # Dev-C++ to work on your code.
 
 CXXFLAGS=-O2 -march=native
+LINKFLAGS=-lrt
 
 all: MyTronBot Replay
 
-OBJECTS = Map.o OpponentIsolated.o ReachableSquares.o GameTree.o
+OBJECTS = Map.o OpponentIsolated.o ReachableSquares.o GameTree.o Time.o
 
 MyTronBot: ${OBJECTS} MyTronBot.o
-	g++ ${CXXFLAGS} -o MyTronBot ${OBJECTS} MyTronBot.o
+	g++ ${CXXFLAGS} -o MyTronBot ${OBJECTS} MyTronBot.o ${LINKFLAGS}
 
 Replay: ${OBJECTS} Replay.o
-	g++ ${CXXFLAGS} -o Replay ${OBJECTS} Replay.o
+	g++ ${CXXFLAGS} -o Replay ${OBJECTS} Replay.o ${LINKFLAGS}
 
 %.o: %.cc
 	g++ ${CXXFLAGS} -c $<

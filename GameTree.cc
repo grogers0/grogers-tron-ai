@@ -1,10 +1,11 @@
 #include "MoveDeciders.h"
+#include "Time.h"
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
-#include <sys/time.h>
 #include <deque>
 #include <utility>
+#include <stdexcept>
 
 static Direction disambiguateBestMoves(const std::deque<Direction> &moves,
         const Map &map);
@@ -133,6 +134,9 @@ void GameTree::destroySubtree(Node *node)
 int GameTree::negamax(Node *node, int depth, int alpha, int beta, int color,
         Direction *dir, HeuristicFunction fun)
 {
+    if (Time::now() > deadline)
+        throw std::runtime_error("time expired for move decision");
+
     if (depth == 0 || node->children[0] == NULL) {
         return color * fun(node->map, node->direction, colorToPlayer(color));
     }
@@ -219,33 +223,18 @@ static int fitness(const Map &map, Direction dir, Player currentPlayer)
     return reachableMovesAdvantage;
 }
 
-static double tvtod(const timeval &tv)
-{
-    return double(tv.tv_sec) + double(tv.tv_usec)/1e6;
-}
-
 Direction decideMoveMinimax(const Map &map)
 {
-    timeval tv;
-    gettimeofday(&tv, NULL);
-    double tstart = tvtod(tv);
-
     GameTree tree(map, 0);
 
-    double tincr = 0, ttot = 0.0;
     Direction dir = NORTH;
-    for (int depth = 1; ttot + tincr*3.0 < 0.90; ++depth) {
-        gettimeofday(&tv, NULL);
-        double tincrstart = tvtod(tv);
-
-        tree.extendTree(map, depth);
-        dir = tree.decideMove(depth, &fitness);
-
-        gettimeofday(&tv, NULL);
-        tincr = tvtod(tv) - tincrstart;
-        ttot = tvtod(tv) - tstart;
-
-        fprintf(stderr, "at depth %d, finding move %s took %f incr sec, %f total sec\n", depth, dirToString(dir), tincr, ttot);
+    try {
+        for (int depth = 1; ; ++depth) {
+            tree.extendTree(map, depth);
+            dir = tree.decideMove(depth, &fitness);
+            fprintf(stderr, "Depth %d ==> %s\n", depth, dirToString(dir));
+        }
+    } catch (...) {
     }
 
     return dir;

@@ -4,6 +4,7 @@
 
 #include "Map.h"
 #include "MoveDeciders.h"
+#include "Time.h"
 #include <vector>
 #include <cstdio>
 #include <set>
@@ -11,59 +12,12 @@
 #include <algorithm>
 
 
-std::set<Direction> moveTowardsOpponent(const Map &map)
-{
-    // don't care what direction the opponent is in if we can't reach them
-    if (isOpponentIsolated(map)) {
-        //fprintf(stderr, "Opponent is isolated, do not move towards them\n");
-        return std::set<Direction>();
-    }
-
-    //fprintf(stderr, "Opponent is reachable, try to move towards them\n");
-
-    int diffX = map.myX() - map.enemyX();
-    int diffY = map.myY() - map.enemyY();
-    std::set<Direction> ret;
-
-    // only try to move towards them if they aren't right on our ass
-    if (abs(diffX) > 1 || abs(diffY) > 1) {
-        if (diffX > 0)
-            ret.insert(WEST);
-        else if (diffX < 0)
-            ret.insert(EAST);
-
-        if (diffY > 0)
-            ret.insert(NORTH);
-        else if (diffY < 0)
-            ret.insert(SOUTH);
-    }
-
-    return ret;
-}
-
 Direction whichMove(const Map& map)
 {
     if (isOpponentIsolated(map))
         return decideMoveIsolatedFromOpponent(map);
 
     return decideMoveMinimax(map);
-
-    int x = map.myX();
-    int y = map.myY();
-
-    std::set<Direction> moves1 = getPossibleMovesReachableSquares(map);
-    std::set<Direction> moves2 = moveTowardsOpponent(map);
-
-    std::vector<Direction> intersection;
-    std::set_intersection(moves1.begin(), moves1.end(),
-            moves2.begin(), moves2.end(), std::back_inserter(intersection));
-    if (intersection.empty())
-        return *moves1.begin();
-
-    if (intersection.empty())
-        return NORTH;
-
-    return *intersection.begin();
 }
 
 // Ignore this function. It is just handling boring stuff for you, like
@@ -75,8 +29,11 @@ int main()
     while (true)
     {
         map.readFromFile(stdin);
+
+        Time tincr(0, 800); // destroying the game tree takes a while...
+        deadline = Time::now() + tincr;
+
         Direction dir = whichMove(map);
-        //fprintf(stderr, "Moving %s\n", dirToString(dir));
         Map::sendMoveToServer(dir);
     }
     return 0;
