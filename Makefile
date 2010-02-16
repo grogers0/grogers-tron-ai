@@ -7,15 +7,12 @@
 CXXFLAGS=-O2 -march=native
 LINKFLAGS=-lrt
 
-all: MyTronBot Replay
+all: MyTronBot
 
 OBJECTS = Map.o OpponentIsolated.o ReachableSquares.o GameTree.o Time.o
 
 MyTronBot: ${OBJECTS} MyTronBot.o
 	g++ ${CXXFLAGS} -o MyTronBot ${OBJECTS} MyTronBot.o ${LINKFLAGS}
-
-Replay: ${OBJECTS} Replay.o
-	g++ ${CXXFLAGS} -o Replay ${OBJECTS} Replay.o ${LINKFLAGS}
 
 %.o: %.cc
 	g++ ${CXXFLAGS} -c $<
