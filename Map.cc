@@ -85,6 +85,8 @@ void Map::move(Direction dir, Player p, bool halfMove)
             break;
     }
 
+    is_wall[(*x)*map_height + (*y)] = true;
+
     switch (dir) {
         case NORTH: (*y)--; break;
         case SOUTH: (*y)++; break;

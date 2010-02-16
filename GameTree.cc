@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <sys/time.h>
 #include <deque>
+#include <utility>
 
 static Direction disambiguateBestMoves(const std::deque<Direction> &moves,
         const Map &map);
@@ -76,6 +77,11 @@ void GameTree::buildTree(Node *node, int plies, Player player)
     if (plies <= 0)
         return;
 
+    if (player == SELF &&
+            node->map.myX() == node->map.enemyX() &&
+            node->map.myY() == node->map.enemyY())
+        return;
+
     int cnt = 0;
     for (Direction dir = DIR_MIN; dir <= DIR_MAX;
             dir = static_cast<Direction>(dir + 1)) {
@@ -131,44 +137,40 @@ int GameTree::negamax(Node *node, int depth, int alpha, int beta, int color,
         return color * fun(node->map, node->direction, colorToPlayer(color));
     }
 
-    std::deque<Direction> bestMoves;
-
     for (int i = 0; i < 4 && node->children[i]; ++i) {
+#if 0
+        static std::deque<std::pair<Player, Direction> > choices;
+        choices.push_back(std::make_pair(colorToPlayer(color), node->children[i]->direction));
+#endif
+
         int newAlpha = -negamax(node->children[i], depth - 1, -beta, -alpha,
                 -color, NULL, fun);
 
-        /*
-        for (int j = 0; j < 20 - depth; ++j)
-            fprintf(stderr, "  ");
-        fprintf(stderr, "depth: %d, %s %s, alpha: %d, newalpha: %d, beta: %d\n", depth, playerToString(colorToPlayer(color)), dirToString(node->children[i]->direction), alpha, newAlpha, beta);
-        */
+#if 0
+        for (std::deque<std::pair<Player, Direction> >::const_iterator it = choices.begin();
+                it != choices.end(); ++it) {
+            fprintf(stderr, "%s %s, ", playerToString(it->first), dirToString(it->second));
+        }
+        fprintf(stderr, "new alpha: %d, curr alpha: %d, curr beta: %d\n", newAlpha, alpha, beta);
+        choices.pop_back();
+#endif
 
         if (newAlpha > alpha) {
-            if (dir) {
-                bestMoves.clear();
-                bestMoves.push_back(node->children[i]->direction);
-            }
+            if (dir)
+                *dir = node->children[i]->direction;
 
-            std::swap(node->children[0], node->children[i]); // for subsequent runs more pruning
+            std::swap(node->children[0], node->children[i]);
             alpha = newAlpha;
-        } else if (newAlpha == alpha) {
-            if (dir) {
-                bestMoves.push_back(node->children[i]->direction);
-            }
         }
 
         if (alpha >= beta)
             break;
     }
 
-    if (dir) {
-        *dir = disambiguateBestMoves(bestMoves, node->map);
-    }
-
     return alpha;
 }
 
-static int isPlayerCloseToEnemy(const Map &map)
+static int distanceFromEnemy(const Map &map)
 {
     int diffX = map.myX() - map.enemyX();
     int diffY = map.myY() - map.enemyY();
@@ -200,6 +202,9 @@ static bool isPlayerWallHugging(Map map)
 
 static int fitness(const Map &map, Direction dir, Player currentPlayer)
 {
+    if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
+        return -1; // draw
+
     int cntPlayer = countReachableSquares(map, SELF);
     int cntEnemy = countReachableSquares(map, ENEMY);
 
@@ -209,36 +214,9 @@ static int fitness(const Map &map, Direction dir, Player currentPlayer)
         return INT_MAX; // player won
     else if (cntPlayer == 0 && cntEnemy == 0)
         return -1; // draw
-    else if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
-        return -1; // draw
 
     int reachableMovesAdvantage = cntPlayer - cntEnemy;
     return reachableMovesAdvantage;
-}
-
-static Direction disambiguateBestMoves(const std::deque<Direction> &moves,
-        const Map &map)
-{
-    Direction bestDir = NORTH;
-    int bestFit = -INT_MAX;
-
-    for (std::deque<Direction>::const_iterator it = moves.begin();
-            it != moves.end(); ++it) {
-        Map newMap(map);
-        newMap.move(*it, SELF);
-
-        int towardsEnemy = isPlayerCloseToEnemy(newMap);
-        int wallHug = isPlayerWallHugging(newMap);
-
-        int fit = towardsEnemy + wallHug;
-
-        if (fit > bestFit) {
-            bestFit = fit;
-            bestDir = *it;
-        }
-    }
-
-    return bestDir;
 }
 
 static double tvtod(const timeval &tv)
@@ -256,7 +234,7 @@ Direction decideMoveMinimax(const Map &map)
 
     double tincr = 0, ttot = 0.0;
     Direction dir = NORTH;
-    for (int depth = 1; ttot + tincr*3.0 < 0.95; ++depth) {
+    for (int depth = 1; ttot + tincr*3.0 < 0.90; ++depth) {
         gettimeofday(&tv, NULL);
         double tincrstart = tvtod(tv);
 

@@ -1,10 +1,10 @@
 #include "MoveDeciders.h"
 #include <cstdio>
 
-static size_t floodFill(std::vector<bool> &board, int x, int y,
+static int floodFill(std::vector<bool> &board, int x, int y,
         int width, int height)
 {
-    size_t ret = 1;
+    int ret = 1;
 
     board[x*height + y] = true;
 
@@ -23,7 +23,7 @@ static size_t floodFill(std::vector<bool> &board, int x, int y,
     return ret;
 }
 
-size_t countReachableSquares(const Map &map, Player player)
+int countReachableSquares(const Map &map, Player player)
 {
     int width = map.width();
     int height = map.height();
@@ -52,7 +52,7 @@ size_t countReachableSquares(const Map &map, Player player)
 
 std::set<Direction> getPossibleMovesReachableSquares(const Map &map)
 {
-   size_t bestReachable = 0;
+    int bestReachable = 0;
 
     std::set<Direction> bestDirs;
 
@@ -61,7 +61,7 @@ std::set<Direction> getPossibleMovesReachableSquares(const Map &map)
         if (!map.isWall(dir, SELF)) {
             Map newMap(map);
             newMap.move(dir, SELF);
-            size_t reachable = countReachableSquares(newMap, SELF);
+            int reachable = countReachableSquares(newMap, SELF);
             if (reachable > bestReachable) {
                 bestDirs.clear();
                 bestDirs.insert(dir);
