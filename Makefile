@@ -5,7 +5,7 @@
 # Dev-C++ to work on your code.
 
 CXXFLAGS=-O2 -march=native
-LINKFLAGS=-lrt
+LINKFLAGS=
 
 all: MyTronBot
 

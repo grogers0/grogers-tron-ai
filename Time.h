@@ -2,6 +2,7 @@
 #define MY_TIME_H
 
 #include <time.h>
+#include <sys/time.h>
 
 class Time
 {
@@ -17,7 +18,7 @@ class Time
         Time operator+(const Time &) const;
 
     private:
-        timespec ts;
+        timeval tv;
 };
 
 
