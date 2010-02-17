@@ -30,7 +30,7 @@ int main()
     {
         map.readFromFile(stdin);
 
-        Time tincr(0, 800); // destroying the game tree takes a while...
+        Time tincr(0, 700); // destroying the game tree takes a while...
         deadline = Time::now() + tincr;
 
         Direction dir = whichMove(map);

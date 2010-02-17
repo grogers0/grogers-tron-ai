@@ -6,11 +6,17 @@
 #include <deque>
 #include <utility>
 #include <stdexcept>
+#include <limits>
+#include <cmath>
+#include <cassert>
 
-static Direction disambiguateBestMoves(const std::deque<Direction> &moves,
-        const Map &map);
+static double distanceFromEnemy(const Map &map);
+static int movesFromEnemy(const Map &map);
+static bool isPlayerWallHugging(const Map &map);
 
-typedef int (*HeuristicFunction)(const Map &map, Direction dir, Player p);
+static const double INF = std::numeric_limits<double>::infinity();
+
+typedef double (*HeuristicFunction)(const Map &map);
 
 class GameTree
 {
@@ -26,8 +32,8 @@ class GameTree
         struct Node;
         void buildTree(Node *node, int plies, Player player);
         void extendTree(Node *node, int plies, Player player);
-        int negamax(Node *node, int depth, int alpha, int beta, int color,
-                Direction *dir, HeuristicFunction fun);
+        double negamax(Node *node, int depth, double alpha, double beta,
+                int color, HeuristicFunction fun);
         void destroySubtree(Node *node);
 
         struct Node
@@ -64,9 +70,43 @@ static Player colorToPlayer(int color)
 
 Direction GameTree::decideMove(int depth, HeuristicFunction fun)
 {
+    std::deque<Direction> bestDirs;
+    double bestAlpha = -INF;
+
+    for (int i = 0; i < 4 && root.children[i]; ++i) {
+        double alpha = -negamax(root.children[i], depth - 1, -INF, INF, -1, fun);
+        fprintf(stderr, "%s alpha: %f\n", dirToString(root.children[i]->direction), alpha);
+
+        if (alpha > bestAlpha) {
+            bestDirs.clear();
+            bestDirs.push_back(root.children[i]->direction);
+            bestAlpha = alpha;
+        } else if (alpha == bestAlpha) {
+            bestDirs.push_back(root.children[i]->direction);
+        }
+    }
+
+    fprintf(stderr, "disambiguating between best moves:");
+    for (std::deque<Direction>::const_iterator it = bestDirs.begin();
+            it != bestDirs.end(); ++it) {
+        fprintf(stderr, " %s", dirToString(*it));
+    }
+    fprintf(stderr, "\n");
+
+    bestAlpha = -INF;
     Direction ret = NORTH;
-    int alpha = negamax(&root, depth, -INT_MAX, INT_MAX, 1, &ret, fun);
-    fprintf(stderr, "Negamax returned alpha: %d\n", alpha);
+    for (std::deque<Direction>::const_iterator it = bestDirs.begin();
+            it != bestDirs.end(); ++it) {
+        Map newMap(root.map);
+        newMap.move(*it, SELF);
+
+        double alpha = fun(newMap);
+        if (alpha > bestAlpha) {
+            ret = *it;
+            bestAlpha = alpha;
+        }
+    }
+
     return ret;
 }
 
@@ -131,38 +171,38 @@ void GameTree::destroySubtree(Node *node)
         delete node;
 }
 
-int GameTree::negamax(Node *node, int depth, int alpha, int beta, int color,
-        Direction *dir, HeuristicFunction fun)
+#if 0
+static std::deque<std::pair<Player, Direction> > choices;
+#endif
+
+double GameTree::negamax(Node *node, int depth, double alpha, double beta,
+        int color, HeuristicFunction fun)
 {
     if (Time::now() > deadline)
         throw std::runtime_error("time expired for move decision");
 
     if (depth == 0 || node->children[0] == NULL) {
-        return color * fun(node->map, node->direction, colorToPlayer(color));
+        return color * fun(node->map);
     }
 
     for (int i = 0; i < 4 && node->children[i]; ++i) {
 #if 0
-        static std::deque<std::pair<Player, Direction> > choices;
         choices.push_back(std::make_pair(colorToPlayer(color), node->children[i]->direction));
 #endif
 
-        int newAlpha = -negamax(node->children[i], depth - 1, -beta, -alpha,
-                -color, NULL, fun);
+        double newAlpha = -negamax(node->children[i], depth - 1, -beta, -alpha,
+                -color, fun);
 
 #if 0
         for (std::deque<std::pair<Player, Direction> >::const_iterator it = choices.begin();
                 it != choices.end(); ++it) {
             fprintf(stderr, "%s %s, ", playerToString(it->first), dirToString(it->second));
         }
-        fprintf(stderr, "new alpha: %d, curr alpha: %d, curr beta: %d\n", newAlpha, alpha, beta);
+        fprintf(stderr, "new alpha: %f, curr alpha: %f, curr beta: %f\n", newAlpha, alpha, beta);
         choices.pop_back();
 #endif
 
         if (newAlpha > alpha) {
-            if (dir)
-                *dir = node->children[i]->direction;
-
             std::swap(node->children[0], node->children[i]);
             alpha = newAlpha;
         }
@@ -174,18 +214,53 @@ int GameTree::negamax(Node *node, int depth, int alpha, int beta, int color,
     return alpha;
 }
 
-static int distanceFromEnemy(const Map &map)
+static double distanceFromEnemy(const Map &map)
 {
-    int diffX = map.myX() - map.enemyX();
-    int diffY = map.myY() - map.enemyY();
+    double diffX = map.myX() - map.enemyX();
+    double diffY = map.myY() - map.enemyY();
 
-    int distance = map.width()*map.width() + map.height()*map.height() -
-        diffX*diffX - diffY*diffY;
-
-    return distance;
+    return sqrt(diffX*diffX + diffY*diffY);
 }
 
-static bool isPlayerWallHugging(Map map)
+
+
+static int movesFromEnemy(const Map &map)
+{
+    assert(!isOpponentIsolated(map));
+
+    std::vector<short> board(map.width()*map.height());
+    for (int i = 0; i < map.width(); ++i) {
+        for (int j = 0; j < map.height(); ++j) {
+            board[i*map.height() + j] = map.isWall(i, j) ? SHRT_MIN : SHRT_MAX;
+        }
+    }
+
+    board[map.myX()*map.height() + map.myY()] = 0;
+    board[map.enemyX()*map.height() + map.enemyY()] = SHRT_MAX;
+
+    for (int depth = 0; ; ++depth) {
+        for (int i = 0; i < map.width(); ++i) {
+            for (int j = 0; j < map.height(); ++j) {
+                if (board[i*map.height() + j] == depth) {
+                    if (i == map.enemyX() && j == map.enemyY())
+                        return depth;
+
+                    if (board[i*map.height() + j + 1] > depth + 1)
+                        board[i*map.height() + j + 1] = depth + 1;
+                    if (board[i*map.height() + j - 1] > depth + 1)
+                        board[i*map.height() + j - 1] = depth + 1;
+                    if (board[(i + 1)*map.height() + j] > depth + 1)
+                        board[(i + 1)*map.height() + j] = depth + 1;
+                    if (board[(i - 1)*map.height() + j] > depth + 1)
+                        board[(i - 1)*map.height() + j] = depth + 1;
+                }
+            }
+        }
+    }
+
+}
+
+static bool isPlayerWallHugging(const Map &map)
 {
     int x = map.myX();
     int y = map.myY();
@@ -204,23 +279,31 @@ static bool isPlayerWallHugging(Map map)
     return cnt >= 2;
 }
 
-static int fitness(const Map &map, Direction dir, Player currentPlayer)
+static double fitness(const Map &map)
 {
     if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
-        return -1; // draw
+        return 0.0; // draw
 
     int cntPlayer = countReachableSquares(map, SELF);
     int cntEnemy = countReachableSquares(map, ENEMY);
 
     if (cntPlayer == 0 && cntEnemy > 0)
-        return -INT_MAX; // player lost
+        return -INF; // player lost
     else if (cntPlayer > 0 && cntEnemy == 0)
-        return INT_MAX; // player won
+        return INF; // player won
     else if (cntPlayer == 0 && cntEnemy == 0)
-        return -1; // draw
+        return 0.0; // draw
 
-    int reachableMovesAdvantage = cntPlayer - cntEnemy;
-    return reachableMovesAdvantage;
+    if (isOpponentIsolated(map)) {
+        return cntPlayer - cntEnemy;
+    }
+
+    double dist = distanceFromEnemy(map);
+    double moves = movesFromEnemy(map);
+    double size = map.height() + map.width();
+    int wallHug = isPlayerWallHugging(map);
+
+    return (size - dist)/size + (size - moves)/size + wallHug;
 }
 
 Direction decideMoveMinimax(const Map &map)

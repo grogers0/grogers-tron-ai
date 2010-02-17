@@ -47,6 +47,9 @@ int countReachableSquares(const Map &map, Player player)
         }
     }
 
+    board[map.myX()*height + map.myY()] = true;
+    board[map.enemyX()*height + map.enemyY()] = true;
+
     return floodFill(board, x, y, width, height) - 1;
 }
 
