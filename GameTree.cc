@@ -86,6 +86,11 @@ Direction GameTree::decideMove(int depth, HeuristicFunction fun)
         }
     }
 
+    if (bestAlpha == -INF) {
+        fprintf(stderr, "best alpha is -Infinity, we lose...\n");
+        throw std::runtime_error("no possible moves, or all moves result in a loss");
+    }
+
     fprintf(stderr, "disambiguating between best moves:");
     for (std::deque<Direction>::const_iterator it = bestDirs.begin();
             it != bestDirs.end(); ++it) {
