@@ -14,8 +14,15 @@
 
 Direction whichMove(const Map& map)
 {
-    if (isOpponentIsolated(map))
+    if (isOpponentIsolated(map)) {
+        Time tincr(0, 950);
+        deadline = Time::now() + tincr;
+
         return decideMoveIsolatedFromOpponent(map);
+    }
+
+    Time tincr(0, 700); // destroying the game tree takes a while...
+    deadline = Time::now() + tincr;
 
     return decideMoveMinimax(map);
 }
@@ -29,9 +36,6 @@ int main()
     while (true)
     {
         map.readFromFile(stdin);
-
-        Time tincr(0, 700); // destroying the game tree takes a while...
-        deadline = Time::now() + tincr;
 
         Direction dir = whichMove(map);
         Map::sendMoveToServer(dir);

@@ -5,8 +5,9 @@
 #include <set>
 
 bool isOpponentIsolated(const Map &map);
-Direction decideMoveIsolatedFromOpponent(const Map &map);
+Direction decideMoveIsolatedFromOpponent(Map map);
 int countReachableSquares(const Map &map, Player player);
+int countReachableSmart(const Map &map, Player player);
 std::set<Direction> getPossibleMovesReachableSquares(const Map &map);
 Direction decideMoveMinimax(const Map &);
 

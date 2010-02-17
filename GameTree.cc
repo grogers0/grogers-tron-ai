@@ -226,7 +226,7 @@ static double distanceFromEnemy(const Map &map)
 
 static int movesFromEnemy(const Map &map)
 {
-    assert(!isOpponentIsolated(map));
+    //assert(!isOpponentIsolated(map));
 
     std::vector<short> board(map.width()*map.height());
     for (int i = 0; i < map.width(); ++i) {

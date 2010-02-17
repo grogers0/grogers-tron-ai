@@ -51,6 +51,7 @@ class Map
         bool isWall(Direction dir, Player p) const;
 
         void move(Direction dir, Player p, bool halfMove = false);
+        void unmove(Direction dir, Player p);
 
         void print() const;
 

@@ -100,6 +100,30 @@ void Map::move(Direction dir, Player p, bool halfMove)
     }
 }
 
+void Map::unmove(Direction dir, Player p)
+{
+    int x, y;
+    switch (p) {
+        case SELF:
+            x = player_one_x;
+            y = player_one_y;
+            break;
+        case ENEMY:
+            x = player_two_x;
+            y = player_two_y;
+            break;
+    }
+
+    switch (dir) {
+        case NORTH: move(SOUTH, p); break;
+        case SOUTH: move(NORTH, p); break;
+        case EAST: move(WEST, p); break;
+        case WEST: move(EAST, p); break;
+    }
+
+    is_wall[x*map_height + y] = false;
+}
+
 void Map::print() const
 {
     for (int y = 0; y < map_height; ++y) {

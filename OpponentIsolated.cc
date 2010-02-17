@@ -1,28 +1,33 @@
 #include "MoveDeciders.h"
+#include "Time.h"
+
+#include <cstdio>
+#include <stdexcept>
+#include <climits>
+#include <utility>
 
 
-
-bool floodFillReachesOpponent(std::vector<std::vector<bool> > &board,
+static bool floodFillReachesOpponent(std::vector<bool> &board,
         int x, int y, int width, int height, int oppX, int oppY)
 {
     if (x == oppX && y == oppY)
         return true;
 
-    board[x][y] = true;
+    board[x*height + y] = true;
 
-    if (x > 0 && !board[x - 1][y] &&
+    if (x > 0 && !board[(x - 1)*height + y] &&
             floodFillReachesOpponent(board, x - 1, y, width, height, oppX, oppY))
         return true;
 
-    if (x < width - 1 && !board[x + 1][y] &&
+    if (x < width - 1 && !board[(x + 1)*height + y] &&
             floodFillReachesOpponent(board, x + 1, y, width, height, oppX, oppY))
         return true;
 
-    if (y > 0 && !board[x][y - 1] &&
+    if (y > 0 && !board[x*height + (y - 1)] &&
             floodFillReachesOpponent(board, x, y - 1, width, height, oppX, oppY))
         return true;
 
-    if (y < height - 1 && !board[x][y + 1] &&
+    if (y < height - 1 && !board[x*height + (y + 1)] &&
             floodFillReachesOpponent(board, x, y + 1, width, height, oppX, oppY))
             return true;
 
@@ -32,23 +37,23 @@ bool floodFillReachesOpponent(std::vector<std::vector<bool> > &board,
 
 bool isOpponentIsolated(const Map &map)
 {
+    int width = map.width();
+    int height = map.height();
+    std::vector<bool> board(width*height);
+
     for (Direction dir = DIR_MIN; dir <= DIR_MAX;
             dir = static_cast<Direction>(dir + 1)) {
         if (!map.isWall(dir, SELF)) {
             Map newMap(map);
             newMap.move(dir, SELF);
 
-            int width = newMap.width();
-            int height = newMap.height();
-            std::vector<std::vector<bool> > board(width, std::vector<bool>(height));
-
             for (int i = 0; i < width; ++i) {
                 for (int j = 0; j < height; ++j) {
-                    board[i][j] = newMap.isWall(i, j);
+                    board[i*height + j] = newMap.isWall(i, j);
                 }
             }
             // allow us to reach the opponent
-            board[newMap.enemyX()][newMap.enemyY()] = false;
+            board[newMap.enemyX()*height + newMap.enemyY()] = false;
 
             if (floodFillReachesOpponent(board, newMap.myX(), newMap.myY(),
                         width, height, newMap.enemyX(), newMap.enemyY()))
@@ -61,29 +66,63 @@ bool isOpponentIsolated(const Map &map)
     return true;
 }
 
-Direction decideMoveIsolatedFromOpponent(const Map &map)
+static std::pair<int, int> isolatedPathFind(Map &map, int depth, Direction *outDir)
 {
-    std::set<Direction> moves = getPossibleMovesReachableSquares(map);
+    if (Time::now() > deadline)
+        throw std::runtime_error("time expired");
 
-    for (std::set<Direction>::const_iterator it = moves.begin();
-            it != moves.end(); ++it) {
-        Map newMap(map);
-        newMap.move(*it, SELF);
+    if (depth <= 0)
+        return std::make_pair(depth, countReachableSquares(map, SELF));
 
-        size_t cnt = 0;
-        for (Direction dir = DIR_MIN; dir <= DIR_MAX;
-                dir = static_cast<Direction>(dir + 1)) {
-            if (newMap.isWall(dir, SELF))
-                ++cnt;
+    int bestCount = -INT_MAX;
+    int bestDepth = INT_MAX;
+    Direction bestDir = NORTH;
+
+    for (Direction dir = DIR_MIN; dir <= DIR_MAX;
+            dir = static_cast<Direction>(dir + 1)) {
+        if (map.isWall(dir, SELF))
+            continue;
+
+        map.move(dir, SELF);
+
+        std::pair<int, int> tmp = isolatedPathFind(map, depth - 1, NULL);
+        if (tmp.first < bestDepth) {
+            bestDepth = tmp.first;
+            bestCount = tmp.second;
+            bestDir = dir;
+        } else if (tmp.first == bestDepth &&
+                tmp.second > bestCount) {
+            bestCount = tmp.second;
+            bestDir = dir;
         }
 
-        if (cnt >= 2)
-            return *it;
+        map.unmove(dir, SELF);
     }
 
-    if (moves.empty())
-        return NORTH;
+    if (outDir)
+        *outDir = bestDir;
 
-    return *moves.begin();
+    return std::make_pair(bestDepth, bestCount);
+}
+
+Direction decideMoveIsolatedFromOpponent(Map map)
+{
+    Direction dir = NORTH, tmpDir = NORTH;
+    std::pair<int, int> depthCount;
+
+    try {
+        int depth = 0;
+        do {
+            fprintf(stderr, "isolated path depth %d ==> %s, found depth: %d, count: %d\n", depth, dirToString(dir), depthCount.first, depthCount.second);
+
+            ++depth;
+            dir = tmpDir;
+            depthCount = isolatedPathFind(map, depth, &tmpDir);
+        } while (depthCount.first == 0);
+    } catch (...) {
+    }
+
+    return dir;
+
 }
 
