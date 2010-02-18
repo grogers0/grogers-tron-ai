@@ -27,16 +27,20 @@ enum Player
     ENEMY
 };
 
-Player otherPlayer(Player);
+inline Player otherPlayer(Player p)
+{
+    if (p == SELF)
+        return ENEMY;
+    else
+        return SELF;
+}
+
 const char *playerToString(Player p);
 
 
 class Map
 {
     public:
-        // Constructs a default Map
-        Map();
-
         // Returns the width of the Tron map.
         int width() const { return map_width; }
 

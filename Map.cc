@@ -17,14 +17,6 @@ const char *dirToString(Direction dir)
     }
 }
 
-Player otherPlayer(Player p)
-{
-    if (p == SELF)
-        return ENEMY;
-    else
-        return SELF;
-}
-
 const char *playerToString(Player p)
 {
     switch (p) {
@@ -32,17 +24,6 @@ const char *playerToString(Player p)
         case ENEMY: return "Enemy";
         default: return "Unknown Player";
     }
-}
-
-
-Map::Map() :
-    player_one_x(0),
-    player_one_y(0),
-    player_two_x(0),
-    player_two_y(0),
-    map_width(0),
-    map_height(0)
-{
 }
 
 bool Map::isWall(Direction dir, Player p) const

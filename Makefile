@@ -4,7 +4,7 @@
 # don't worry about it. Just use Visual C++ Express Edition or
 # Dev-C++ to work on your code.
 
-CXXFLAGS=-O2 -march=native
+CXXFLAGS=-O2 -march=native -pg -fno-inline-functions-called-once
 LINKFLAGS=
 
 all: MyTronBot
