@@ -33,7 +33,7 @@ class GameTree
         void buildTree(Node *node, int plies, Player player);
         void extendTree(Node *node, int plies, Player player);
         double negamax(Node *node, int depth, double alpha, double beta,
-                int color, HeuristicFunction fun);
+                int sign, HeuristicFunction fun);
         void destroySubtree(Node *node);
 
         struct Node
@@ -60,9 +60,9 @@ GameTree::~GameTree()
     destroySubtree(&root);
 }
 
-static Player colorToPlayer(int color)
+static Player signToPlayer(int sign)
 {
-    if (color == 1)
+    if (sign == 1)
         return SELF;
     else
         return ENEMY;
@@ -181,22 +181,22 @@ static std::deque<std::pair<Player, Direction> > choices;
 #endif
 
 double GameTree::negamax(Node *node, int depth, double alpha, double beta,
-        int color, HeuristicFunction fun)
+        int sign, HeuristicFunction fun)
 {
     if (Time::now() > deadline)
         throw std::runtime_error("time expired for move decision");
 
     if (depth == 0 || node->children[0] == NULL) {
-        return color * fun(node->map);
+        return sign * fun(node->map);
     }
 
     for (int i = 0; i < 4 && node->children[i]; ++i) {
 #if 0
-        choices.push_back(std::make_pair(colorToPlayer(color), node->children[i]->direction));
+        choices.push_back(std::make_pair(signToPlayer(sign), node->children[i]->direction));
 #endif
 
         double newAlpha = -negamax(node->children[i], depth - 1, -beta, -alpha,
-                -color, fun);
+                -sign, fun);
 
 #if 0
         for (std::deque<std::pair<Player, Direction> >::const_iterator it = choices.begin();
