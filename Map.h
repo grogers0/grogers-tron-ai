@@ -50,7 +50,7 @@ class Map
         void move(Direction dir, Player p);
         void unmove(Direction dir, Player p);
 
-        bool anyMoves(Player p) const;
+        int cntMoves(Player p) const;
 
         void print() const;
 
@@ -209,14 +209,15 @@ inline void Map::unmove(Direction dir, Player p)
     }
 }
 
-inline bool Map::anyMoves(Player p) const
+inline int Map::cntMoves(Player p) const
 {
+    int cnt = 0;
     for (Direction dir = DIR_MIN; dir <= DIR_MAX;
             dir = static_cast<Direction>(dir + 1)) {
         if (!isWall(dir, p))
-            return true;
+            ++cnt;
     }
-    return false;
+    return cnt;
 }
 
 // Get my X and Y position. These are zero-based.

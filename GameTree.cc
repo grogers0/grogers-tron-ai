@@ -334,14 +334,14 @@ static double fitness(const Map &map)
     if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
         return 0.0; // draw
 
-    bool playerHasMoves = map.anyMoves(SELF);
-    bool enemyHasMoves = map.anyMoves(ENEMY);
+    int playerMoves = map.cntMoves(SELF);
+    int enemyMoves = map.cntMoves(ENEMY);
 
-    if (!playerHasMoves && enemyHasMoves)
+    if (!playerMoves && enemyMoves)
         return -INF; // player lost
-    if (playerHasMoves && !enemyHasMoves)
+    if (playerMoves && !enemyMoves)
         return INF; // player won
-    if (!playerHasMoves && !enemyHasMoves)
+    if (!playerMoves && !enemyMoves)
         return 0.0; // draw
 
     int voronoi = voronoiTerritory(map);

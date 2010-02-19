@@ -1,5 +1,6 @@
 #include "MoveDeciders.h"
 #include <cstdio>
+#include <cassert>
 
 static int floodFill(std::vector<bool> &board, int x, int y,
         int width, int height)
@@ -25,6 +26,8 @@ static int floodFill(std::vector<bool> &board, int x, int y,
 
 int countReachableSquares(const Map &map, Player player)
 {
+    //assert(isOpponentIsolated(map));
+
     int width = map.width();
     int height = map.height();
     std::vector<bool> board(width*height);
