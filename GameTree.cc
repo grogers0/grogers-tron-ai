@@ -169,7 +169,7 @@ double GameTree::negamax(Node *node, Map &map, int depth,
                 it != choices.end(); ++it) {
             fprintf(stderr, "%s %s, ", playerToString(it->first), dirToString(it->second));
         }
-        fprintf(stderr, "new alpha: %f, curr alpha: %f, curr beta: %f\n", newAlpha, alpha, beta);
+        fprintf(stderr, "new alpha: %g, curr alpha: %g, curr beta: %g\n", newAlpha, alpha, beta);
         choices.pop_back();
 #endif
 

@@ -125,6 +125,8 @@ inline bool Map::isWall(Direction dir, Player p) const
             x = player_two_x;
             y = player_two_y;
             break;
+        default:
+            return false;
     }
 
     switch (dir) {
@@ -153,6 +155,8 @@ inline void Map::move(Direction dir, Player p)
             x = &player_two_x;
             y = &player_two_y;
             break;
+        default:
+            return;
     }
 
     is_wall[(*x)*map_height + (*y)] = true;
@@ -162,6 +166,7 @@ inline void Map::move(Direction dir, Player p)
         case SOUTH: (*y)++; break;
         case WEST: (*x)--; break;
         case EAST: (*x)++; break;
+        default: return;
     }
 
     if (p != SELF) {
@@ -183,6 +188,8 @@ inline void Map::unmove(Direction dir, Player p)
             x = &player_two_x;
             y = &player_two_y;
             break;
+        default:
+            return;
     }
 
     is_wall[(*x)*map_height + (*y)] = false;
@@ -193,10 +200,13 @@ inline void Map::unmove(Direction dir, Player p)
         case SOUTH: (*y)--; break;
         case WEST: (*x)++; break;
         case EAST: (*x)--; break;
+        default: return;
     }
 
-    if (p == SELF)
-        is_wall[(*x)*map_height + (*y)] = false;
+    if (p != SELF) {
+        is_wall[player_one_x*map_height + player_one_y] = false;
+        is_wall[player_two_x*map_height + player_two_y] = false;
+    }
 }
 
 inline bool Map::anyMoves(Player p) const
