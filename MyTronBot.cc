@@ -21,7 +21,7 @@ Direction whichMove(const Map& map)
         return decideMoveIsolatedFromOpponent(map);
     }
 
-    Time tincr(0, 900); // destroying the game tree takes a while...
+    Time tincr(0, 950); // destroying the game tree takes a while...
     deadline = Time::now() + tincr;
 
     return decideMoveMinimax(map);
@@ -38,6 +38,7 @@ int main()
         map.readFromFile(stdin);
 
         Direction dir = whichMove(map);
+
         Map::sendMoveToServer(dir);
     }
     return 0;

@@ -95,6 +95,9 @@ void GameTree::buildTree(Node *node, Map &map, int plies, Player player)
     if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
         return;
 
+    if (Time::now() > deadline)
+        throw std::runtime_error("time expired for move decision");
+
     int cnt = 0;
     for (Direction dir = DIR_MIN; dir <= DIR_MAX;
             dir = static_cast<Direction>(dir + 1)) {
