@@ -33,7 +33,7 @@ class GameTree
         void buildTree(Node *node, int plies, Player player);
         void extendTree(Node *node, int plies, Player player);
         double negamax(Node *node, int depth, double alpha, double beta,
-                int sign, HeuristicFunction fun);
+                int sign, HeuristicFunction fun, Direction *dir);
         void destroySubtree(Node *node);
 
         struct Node
@@ -70,49 +70,16 @@ static Player signToPlayer(int sign)
 
 Direction GameTree::decideMove(int depth, HeuristicFunction fun)
 {
-    std::deque<Direction> bestDirs;
-    double bestAlpha = -INF;
+    Direction bestDir = NORTH;
 
-    for (int i = 0; i < 4 && root.children[i]; ++i) {
-        double alpha = -negamax(root.children[i], depth - 1, -INF, INF, -1, fun);
-        fprintf(stderr, "%s alpha: %f\n", dirToString(root.children[i]->direction), alpha);
+    double alpha = negamax(&root, depth, -INF, INF, 1, fun, &bestDir);
 
-        if (alpha > bestAlpha) {
-            bestDirs.clear();
-            bestDirs.push_back(root.children[i]->direction);
-            bestAlpha = alpha;
-        } else if (alpha == bestAlpha) {
-            bestDirs.push_back(root.children[i]->direction);
-        }
-    }
-
-    if (bestAlpha == -INF) {
-        fprintf(stderr, "best alpha is -Infinity, we lose...\n");
+    if (alpha == -INF) {
+        fprintf(stderr, "best alpha is -Infinity, we lose no matter what...\n");
         throw std::runtime_error("no possible moves, or all moves result in a loss");
     }
 
-    fprintf(stderr, "disambiguating between best moves:");
-    for (std::deque<Direction>::const_iterator it = bestDirs.begin();
-            it != bestDirs.end(); ++it) {
-        fprintf(stderr, " %s", dirToString(*it));
-    }
-    fprintf(stderr, "\n");
-
-    bestAlpha = -INF;
-    Direction ret = NORTH;
-    for (std::deque<Direction>::const_iterator it = bestDirs.begin();
-            it != bestDirs.end(); ++it) {
-        Map newMap(root.map);
-        newMap.move(*it, SELF);
-
-        double alpha = fun(newMap);
-        if (alpha > bestAlpha) {
-            ret = *it;
-            bestAlpha = alpha;
-        }
-    }
-
-    return ret;
+    return bestDir;
 }
 
 void GameTree::buildTree(Node *node, int plies, Player player)
@@ -181,7 +148,7 @@ static std::deque<std::pair<Player, Direction> > choices;
 #endif
 
 double GameTree::negamax(Node *node, int depth, double alpha, double beta,
-        int sign, HeuristicFunction fun)
+        int sign, HeuristicFunction fun, Direction *dir)
 {
     if (Time::now() > deadline)
         throw std::runtime_error("time expired for move decision");
@@ -196,7 +163,7 @@ double GameTree::negamax(Node *node, int depth, double alpha, double beta,
 #endif
 
         double newAlpha = -negamax(node->children[i], depth - 1, -beta, -alpha,
-                -sign, fun);
+                -sign, fun, NULL);
 
 #if 0
         for (std::deque<std::pair<Player, Direction> >::const_iterator it = choices.begin();
@@ -208,6 +175,9 @@ double GameTree::negamax(Node *node, int depth, double alpha, double beta,
 #endif
 
         if (newAlpha > alpha) {
+            if (dir)
+                *dir = node->children[i]->direction;
+
             std::swap(node->children[0], node->children[i]);
             alpha = newAlpha;
         }
