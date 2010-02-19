@@ -15,13 +15,13 @@
 Direction whichMove(const Map& map)
 {
     if (isOpponentIsolated(map)) {
-        Time tincr(0, 900);
+        Time tincr(0, 950);
         deadline = Time::now() + tincr;
 
         return decideMoveIsolatedFromOpponent(map);
     }
 
-    Time tincr(0, 250); // destroying the game tree takes a while...
+    Time tincr(0, 900); // destroying the game tree takes a while...
     deadline = Time::now() + tincr;
 
     return decideMoveMinimax(map);

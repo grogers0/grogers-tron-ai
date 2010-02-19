@@ -41,41 +41,24 @@ const char *playerToString(Player p);
 class Map
 {
     public:
-        // Returns the width of the Tron map.
-        int width() const { return map_width; }
+        int width() const;
+        int height() const;
 
-        // Returns the height of the Tron map.
-        int height() const { return map_height; }
-
-        // Returns whether or not the given cell is a wall or not. TRUE means it's
-        // a wall, FALSE means it's not a wall, and is passable. Any spaces that are
-        // not on the board are deemed to be walls.
-        bool isWall(int x, int y) const { return is_wall[x*map_height + y]; }
-
+        bool isWall(int x, int y) const;
         bool isWall(Direction dir, Player p) const;
 
-        void move(Direction dir, Player p, bool halfMove = false);
+        void move(Direction dir, Player p);
         void unmove(Direction dir, Player p);
 
-        bool anyMoves(Player p) const
-        {
-            for (Direction dir = DIR_MIN; dir <= DIR_MAX;
-                    dir = static_cast<Direction>(dir + 1)) {
-                if (!isWall(dir, p))
-                    return true;
-            }
-            return false;
-        }
+        bool anyMoves(Player p) const;
 
         void print() const;
 
-        // Get my X and Y position. These are zero-based.
-        int myX() const { return player_one_x; }
-        int myY() const { return player_one_y; }
+        int myX() const;
+        int myY() const;
 
-        // Get the opponent's X and Y position. These are zero-based.
-        int enemyX() const { return player_two_x; }
-        int enemyY() const { return player_two_y; }
+        int enemyX() const;
+        int enemyY() const;
 
         // Sends your move to the contest engine. The four possible moves are
         //   * 1 -- North. Negative Y direction.
@@ -115,5 +98,123 @@ class Map
         // Map dimensions.
         int map_width, map_height;
 };
+
+// Returns the width of the Tron map.
+inline int Map::width() const { return map_width; }
+
+// Returns the height of the Tron map.
+inline int Map::height() const { return map_height; }
+
+// Returns whether or not the given cell is a wall or not. TRUE means it's
+// a wall, FALSE means it's not a wall, and is passable. Any spaces that are
+// not on the board are deemed to be walls.
+inline bool Map::isWall(int x, int y) const
+{
+    return is_wall[x*map_height + y];
+}
+
+inline bool Map::isWall(Direction dir, Player p) const
+{
+    int x, y;
+    switch (p) {
+        case SELF:
+            x = player_one_x;
+            y = player_one_y;
+            break;
+        case ENEMY:
+            x = player_two_x;
+            y = player_two_y;
+            break;
+    }
+
+    switch (dir) {
+        case NORTH:
+            return isWall(x, y - 1);
+        case SOUTH:
+            return isWall(x, y + 1);
+        case WEST:
+            return isWall(x - 1, y);
+        case EAST:
+            return isWall(x + 1, y);
+        default:
+            return false;
+    }
+}
+
+inline void Map::move(Direction dir, Player p)
+{
+    int *x, *y;
+    switch (p) {
+        case SELF:
+            x = &player_one_x;
+            y = &player_one_y;
+            break;
+        case ENEMY:
+            x = &player_two_x;
+            y = &player_two_y;
+            break;
+    }
+
+    is_wall[(*x)*map_height + (*y)] = true;
+
+    switch (dir) {
+        case NORTH: (*y)--; break;
+        case SOUTH: (*y)++; break;
+        case WEST: (*x)--; break;
+        case EAST: (*x)++; break;
+    }
+
+    if (p != SELF) {
+        is_wall[player_one_x*map_height + player_one_y] = true;
+        is_wall[player_two_x*map_height + player_two_y] = true;
+    }
+}
+
+
+inline void Map::unmove(Direction dir, Player p)
+{
+    int *x, *y;
+    switch (p) {
+        case SELF:
+            x = &player_one_x;
+            y = &player_one_y;
+            break;
+        case ENEMY:
+            x = &player_two_x;
+            y = &player_two_y;
+            break;
+    }
+
+    is_wall[(*x)*map_height + (*y)] = false;
+
+    // unmove is backwards the regular move...
+    switch (dir) {
+        case NORTH: (*y)++; break;
+        case SOUTH: (*y)--; break;
+        case WEST: (*x)++; break;
+        case EAST: (*x)--; break;
+    }
+
+    if (p == SELF)
+        is_wall[(*x)*map_height + (*y)] = false;
+}
+
+inline bool Map::anyMoves(Player p) const
+{
+    for (Direction dir = DIR_MIN; dir <= DIR_MAX;
+            dir = static_cast<Direction>(dir + 1)) {
+        if (!isWall(dir, p))
+            return true;
+    }
+    return false;
+}
+
+// Get my X and Y position. These are zero-based.
+inline int Map::myX() const { return player_one_x; }
+inline int Map::myY() const { return player_one_y; }
+
+// Get the opponent's X and Y position. These are zero-based.
+inline int Map::enemyX() const { return player_two_x; }
+inline int Map::enemyY() const { return player_two_y; }
 
 #endif

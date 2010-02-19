@@ -21,46 +21,51 @@ typedef double (*HeuristicFunction)(const Map &map);
 class GameTree
 {
     public:
-        GameTree(const Map &map, int plies);
+        GameTree();
         ~GameTree();
 
-        Direction decideMove(int depth, HeuristicFunction fun);
+        Direction decideMove(Map &map, int depth, HeuristicFunction fun);
 
-        void extendTree(const Map &map, int plies);
+        void extendTree(Map &map, int plies);
 
     private:
         struct Node;
-        void buildTree(Node *node, int plies, Player player);
-        void extendTree(Node *node, int plies, Player player);
-        double negamax(Node *node, int depth, double alpha, double beta,
+        void buildTree(Node *node, Map &map, int plies, Player player);
+        void extendTree(Node *node, Map &map, int plies, Player player);
+        double negamax(Node *node, Map &map, int depth,
+                double alpha, double beta,
                 int sign, HeuristicFunction fun, Direction *dir);
-        void destroySubtree(Node *node);
 
         struct Node
         {
             Node *children[4];
 
             Direction direction;
-            Map map;
+
+            Node(Direction dir) : direction(dir)
+            {
+                for (int i = 0; i < 4; ++i)
+                    children[i] = NULL;
+            }
         };
 
-        Node root;
+        Node *root;
+
+        std::deque<Node> nodesAlloc;
 };
 
-GameTree::GameTree(const Map &map, int plies)
+GameTree::GameTree()
 {
-    root.direction = NORTH;
-    root.map = map;
+    nodesAlloc.push_back(Node(NORTH));
 
-    buildTree(&root, plies, SELF);
+    root = &nodesAlloc.back();
 }
 
 GameTree::~GameTree()
 {
-    destroySubtree(&root);
 }
 
-static Player signToPlayer(int sign)
+static inline  Player signToPlayer(int sign)
 {
     if (sign == 1)
         return SELF;
@@ -68,11 +73,11 @@ static Player signToPlayer(int sign)
         return ENEMY;
 }
 
-Direction GameTree::decideMove(int depth, HeuristicFunction fun)
+Direction GameTree::decideMove(Map &map, int depth, HeuristicFunction fun)
 {
     Direction bestDir = NORTH;
 
-    double alpha = negamax(&root, depth, -INF, INF, 1, fun, &bestDir);
+    double alpha = negamax(root, map, depth, -INF, INF, 1, fun, &bestDir);
 
     if (alpha == -INF) {
         fprintf(stderr, "best alpha is -Infinity, we lose no matter what...\n");
@@ -82,79 +87,68 @@ Direction GameTree::decideMove(int depth, HeuristicFunction fun)
     return bestDir;
 }
 
-void GameTree::buildTree(Node *node, int plies, Player player)
+void GameTree::buildTree(Node *node, Map &map, int plies, Player player)
 {
-    for (int i = 0; i < 4; ++i)
-        node->children[i] = NULL;
-
     if (plies <= 0)
         return;
 
-    if (player == SELF &&
-            node->map.myX() == node->map.enemyX() &&
-            node->map.myY() == node->map.enemyY())
+    if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
         return;
 
     int cnt = 0;
     for (Direction dir = DIR_MIN; dir <= DIR_MAX;
             dir = static_cast<Direction>(dir + 1)) {
-        if (node->map.isWall(dir, player))
+        if (map.isWall(dir, player))
             continue;
 
-        node->children[cnt] = new Node;
-        node->children[cnt]->direction = dir;
-        node->children[cnt]->map = node->map;
-        node->children[cnt]->map.move(dir, player, player == SELF);
+        nodesAlloc.push_back(Node(dir));
 
-        buildTree(node->children[cnt], plies - 1, otherPlayer(player));
+        node->children[cnt] = &nodesAlloc.back();
+
+        map.move(dir, player);
+        buildTree(node->children[cnt], map, plies - 1, otherPlayer(player));
+        map.unmove(dir, player);
 
         ++cnt;
     }
 }
 
-void GameTree::extendTree(const Map &map, int plies)
+void GameTree::extendTree(Map &map, int plies)
 {
-    extendTree(&root, plies, SELF);
+    extendTree(root, map, plies, SELF);
 }
 
-void GameTree::extendTree(Node *node, int plies, Player player)
+void GameTree::extendTree(Node *node, Map &map, int plies, Player player)
 {
     if (plies <= 0)
         return;
 
     if (!node->children[0]) {
-        buildTree(node, plies, player);
+        buildTree(node, map, plies, player);
         return;
     }
 
     for (int i = 0; i < 4 && node->children[i]; ++i) {
-        extendTree(node->children[i], plies - 1, otherPlayer(player));
+        map.move(node->children[i]->direction, player);
+        extendTree(node->children[i], map, plies - 1, otherPlayer(player));
+        map.unmove(node->children[i]->direction, player);
     }
 }
 
-
-void GameTree::destroySubtree(Node *node)
-{
-    for (int i = 0; i < 4 && node->children[i]; ++i) {
-        destroySubtree(node->children[i]);
-    }
-
-    if (node != &root)
-        delete node;
-}
 
 #if 0
 static std::deque<std::pair<Player, Direction> > choices;
 #endif
 
-double GameTree::negamax(Node *node, int depth, double alpha, double beta,
+double GameTree::negamax(Node *node, Map &map, int depth,
+        double alpha, double beta,
         int sign, HeuristicFunction fun, Direction *dir)
 {
     if (Time::now() > deadline)
         throw std::runtime_error("time expired for move decision");
 
     if (depth == 0 || node->children[0] == NULL) {
-        return sign * fun(node->map);
+        return sign * fun(map);
     }
 
     for (int i = 0; i < 4 && node->children[i]; ++i) {
@@ -162,8 +156,10 @@ double GameTree::negamax(Node *node, int depth, double alpha, double beta,
         choices.push_back(std::make_pair(signToPlayer(sign), node->children[i]->direction));
 #endif
 
-        double newAlpha = -negamax(node->children[i], depth - 1, -beta, -alpha,
-                -sign, fun, NULL);
+        map.move(node->children[i]->direction, signToPlayer(sign));
+        double newAlpha = -negamax(node->children[i], map, depth - 1,
+                -beta, -alpha, -sign, fun, NULL);
+        map.unmove(node->children[i]->direction, signToPlayer(sign));
 
 #if 0
         for (std::deque<std::pair<Player, Direction> >::const_iterator it = choices.begin();
@@ -358,15 +354,15 @@ static double fitness(const Map &map)
     return voronoi;
 }
 
-Direction decideMoveMinimax(const Map &map)
+Direction decideMoveMinimax(Map map)
 {
-    GameTree tree(map, 0);
+    GameTree tree;
 
     Direction dir = NORTH;
     try {
         for (int depth = 1; ; ++depth) {
             tree.extendTree(map, depth);
-            dir = tree.decideMove(depth, &fitness);
+            dir = tree.decideMove(map, depth, &fitness);
             fprintf(stderr, "Depth %d ==> %s\n", depth, dirToString(dir));
         }
     } catch (...) {
