@@ -284,31 +284,108 @@ static bool isPlayerWallHugging(const Map &map)
     return cnt >= 2;
 }
 
+void fillBoardVoronoi(std::vector<signed char> &board, int depth,
+        std::vector<std::pair<unsigned char, unsigned char> > &posVisits,
+        int height)
+{
+    std::vector<std::pair<unsigned char, unsigned char> > posVisitsOut;
+    posVisitsOut.reserve(posVisits.capacity());
+
+    for (std::vector<std::pair<unsigned char, unsigned char> >::const_iterator it = posVisits.begin();
+            it != posVisits.end(); ++it) {
+        int x = it->first, y = it->second;
+        if (board[x*height + y + 1] > depth) {
+            board[x*height + y + 1] = depth;
+            posVisitsOut.push_back(std::pair<unsigned char, unsigned char>(x, y + 1));
+        }
+        if (board[x*height + y - 1] > depth) {
+            board[x*height + y - 1] = depth;
+            posVisitsOut.push_back(std::pair<unsigned char, unsigned char>(x, y - 1));
+        }
+        if (board[(x + 1)*height + y] > depth) {
+            board[(x + 1)*height + y] = depth;
+            posVisitsOut.push_back(std::pair<unsigned char, unsigned char>(x + 1, y));
+        }
+        if (board[(x - 1)*height + y] > depth) {
+            board[(x - 1)*height + y] = depth;
+            posVisitsOut.push_back(std::pair<unsigned char, unsigned char>(x - 1, y));
+        }
+    }
+
+    posVisits.swap(posVisitsOut);
+}
+
+// count of squares player can reach first minus squares enemy can reach first
+static int voronoiTerritory(const Map &map)
+{
+    int width = map.width();
+    int height = map.height();
+
+    std::vector<signed char> boardPlayer(width*height);
+
+    for (int i = 0; i < width; ++i) {
+        for (int j = 0; j < height; ++j) {
+            boardPlayer[i*height + j] = map.isWall(i, j) ? SCHAR_MIN : SCHAR_MAX;
+        }
+    }
+
+    boardPlayer[map.myX()*height + map.myY()] = SCHAR_MIN;
+    boardPlayer[map.enemyX()*height + map.enemyY()] = SCHAR_MIN;
+
+    std::vector<signed char> boardEnemy(boardPlayer);
+
+    std::vector<std::pair<unsigned char, unsigned char> > posVisits;
+    posVisits.reserve(width*2 + height*2);
+    posVisits.push_back(std::pair<unsigned char, unsigned char>(map.myX(), map.myY()));
+    for (int depth = 1; !posVisits.empty(); ++depth) {
+        fillBoardVoronoi(boardPlayer, depth, posVisits, height);
+    }
+
+    posVisits.clear();
+    posVisits.push_back(std::pair<unsigned char, unsigned char>(map.enemyX(), map.enemyY()));
+    for (int depth = 1; !posVisits.empty(); ++depth) {
+        fillBoardVoronoi(boardEnemy, depth, posVisits, height);
+    }
+
+    int cnt = 0;
+    for (int i = 0; i < width; ++i) {
+        for (int j = 0; j < height; ++j) {
+            if (boardPlayer[i*height + j] < boardEnemy[i*height + j])
+                ++cnt;
+            else if (boardPlayer[i*height + j] > boardEnemy[i*height + j])
+                --cnt;
+        }
+    }
+
+    return cnt;
+}
+
 static double fitness(const Map &map)
 {
     if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
         return 0.0; // draw
 
-    int cntPlayer = countReachableSquares(map, SELF);
-    int cntEnemy = countReachableSquares(map, ENEMY);
+    bool playerHasMoves = map.anyMoves(SELF);
+    bool enemyHasMoves = map.anyMoves(ENEMY);
 
-    if (cntPlayer == 0 && cntEnemy > 0)
+    if (!playerHasMoves && enemyHasMoves)
         return -INF; // player lost
-    else if (cntPlayer > 0 && cntEnemy == 0)
+    if (playerHasMoves && !enemyHasMoves)
         return INF; // player won
-    else if (cntPlayer == 0 && cntEnemy == 0)
+    if (!playerHasMoves && !enemyHasMoves)
         return 0.0; // draw
 
-    if (isOpponentIsolated(map)) {
-        return cntPlayer - cntEnemy;
-    }
+    int voronoi = voronoiTerritory(map);
 
-    double dist = distanceFromEnemy(map);
-    double moves = movesFromEnemy(map);
-    double size = map.height() + map.width();
-    int wallHug = isPlayerWallHugging(map);
+    /*if (isOpponentIsolated(map)) {
+        int cntPlayer = countReachableSquares(map, SELF);
+        int cntEnemy = countReachableSquares(map, ENEMY);
+        if (voronoi != cntPlayer - cntEnemy) {
+            fprintf(stderr, "BUG: cnt player: %d, cnt enemy: %d, voronoi: %d\n", cntPlayer, cntEnemy, voronoi);
+        }
+    }*/
 
-    return (size - dist)/size + (size - moves)/size + wallHug;
+    return voronoi;
 }
 
 Direction decideMoveMinimax(const Map &map)

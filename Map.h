@@ -57,6 +57,16 @@ class Map
         void move(Direction dir, Player p, bool halfMove = false);
         void unmove(Direction dir, Player p);
 
+        bool anyMoves(Player p) const
+        {
+            for (Direction dir = DIR_MIN; dir <= DIR_MAX;
+                    dir = static_cast<Direction>(dir + 1)) {
+                if (!isWall(dir, p))
+                    return true;
+            }
+            return false;
+        }
+
         void print() const;
 
         // Get my X and Y position. These are zero-based.
