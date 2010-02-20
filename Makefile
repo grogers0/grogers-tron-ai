@@ -18,4 +18,4 @@ MyTronBot: ${OBJECTS} MyTronBot.o
 	g++ ${CXXFLAGS} -c $<
 
 clean:
-	rm -f *.o MyTronBot
+	rm -f *.o MyTronBot *.gcda gmon.out core*

@@ -169,6 +169,10 @@ double GameTree::negamax(Node *node, Map &map, int depth,
     if (Time::now() > deadline)
         throw std::runtime_error("time expired for move decision");
 
+    if (depth > 0 && node->children[0] == NULL) {
+        buildTree(node, map, 1, signToPlayer(sign));
+    }
+
     if (depth == 0 || node->children[0] == NULL) {
         return sign * fun(map);
     }
@@ -315,8 +319,7 @@ Direction decideMoveMinimax(Map map)
 
     Direction dir = NORTH;
     try {
-        for (int depth = 1; ; ++depth) {
-            tree.extendTree(map, depth);
+        for (int depth = 1; depth < 100; ++depth) {
             dir = tree.decideMove(map, depth, &fitness);
             fprintf(stderr, "Depth %d ==> %s\n", depth, dirToString(dir));
         }
