@@ -35,14 +35,10 @@ class GameTree
         struct Node
         {
             Node *children[4];
-
             Direction direction;
 
-            Node(Direction dir) : direction(dir)
-            {
-                for (int i = 0; i < 4; ++i)
-                    children[i] = NULL;
-            }
+            Node(Direction dir);
+            void promoteChild(int i);
         };
 
         Node *root;
@@ -61,12 +57,39 @@ GameTree::~GameTree()
 {
 }
 
-static inline  Player signToPlayer(int sign)
+static inline Player signToPlayer(int sign)
 {
     if (sign == 1)
         return SELF;
     else
         return ENEMY;
+}
+
+inline GameTree::Node::Node(Direction dir) :
+    direction(dir)
+{
+    for (int i = 0; i < 4; ++i)
+        children[i] = NULL;
+}
+
+inline void GameTree::Node::promoteChild(int i)
+{
+    switch (i) {
+        case 0:
+            return;
+        case 1:
+            std::swap(children[0], children[1]);
+            return;
+        case 2:
+            std::swap(children[1], children[2]);
+            std::swap(children[0], children[1]);
+            return;
+        case 3:
+            std::swap(children[2], children[3]);
+            std::swap(children[1], children[2]);
+            std::swap(children[0], children[1]);
+            return;
+    }
 }
 
 Direction GameTree::decideMove(Map &map, int depth, HeuristicFunction fun)
@@ -174,7 +197,7 @@ double GameTree::negamax(Node *node, Map &map, int depth,
             if (bestDir)
                 *bestDir = dir;
 
-            std::swap(node->children[0], node->children[i]);
+            node->promoteChild(i);
             alpha = a;
         }
 
