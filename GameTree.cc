@@ -10,10 +10,6 @@
 #include <cmath>
 #include <cassert>
 
-static double distanceFromEnemy(const Map &map);
-static int movesFromEnemy(const Map &map);
-static bool isPlayerWallHugging(const Map &map);
-
 static const double INF = std::numeric_limits<double>::infinity();
 
 typedef double (*HeuristicFunction)(const Map &map);
@@ -186,71 +182,6 @@ double GameTree::negamax(Node *node, Map &map, int depth,
     }
 
     return alpha;
-}
-
-static double distanceFromEnemy(const Map &map)
-{
-    double diffX = map.myX() - map.enemyX();
-    double diffY = map.myY() - map.enemyY();
-
-    return sqrt(diffX*diffX + diffY*diffY);
-}
-
-
-
-static int movesFromEnemy(const Map &map)
-{
-    //assert(!isOpponentIsolated(map));
-
-    std::vector<short> board(map.width()*map.height());
-    for (int i = 0; i < map.width(); ++i) {
-        for (int j = 0; j < map.height(); ++j) {
-            board[i*map.height() + j] = map.isWall(i, j) ? SHRT_MIN : SHRT_MAX;
-        }
-    }
-
-    board[map.myX()*map.height() + map.myY()] = 0;
-    board[map.enemyX()*map.height() + map.enemyY()] = SHRT_MAX;
-
-    for (int depth = 0; ; ++depth) {
-        for (int i = 0; i < map.width(); ++i) {
-            for (int j = 0; j < map.height(); ++j) {
-                if (board[i*map.height() + j] == depth) {
-                    if (i == map.enemyX() && j == map.enemyY())
-                        return depth;
-
-                    if (board[i*map.height() + j + 1] > depth + 1)
-                        board[i*map.height() + j + 1] = depth + 1;
-                    if (board[i*map.height() + j - 1] > depth + 1)
-                        board[i*map.height() + j - 1] = depth + 1;
-                    if (board[(i + 1)*map.height() + j] > depth + 1)
-                        board[(i + 1)*map.height() + j] = depth + 1;
-                    if (board[(i - 1)*map.height() + j] > depth + 1)
-                        board[(i - 1)*map.height() + j] = depth + 1;
-                }
-            }
-        }
-    }
-
-}
-
-static bool isPlayerWallHugging(const Map &map)
-{
-    int x = map.myX();
-    int y = map.myY();
-
-    int cnt = 0;
-
-    if (map.isWall(x - 1, y))
-        ++cnt;
-    if (map.isWall(x + 1, y))
-        ++cnt;
-    if (map.isWall(x, y - 1))
-        ++cnt;
-    if (map.isWall(x, y + 1))
-        ++cnt;
-
-    return cnt >= 2;
 }
 
 void fillBoardVoronoi(std::vector<signed char> &board, int depth,
