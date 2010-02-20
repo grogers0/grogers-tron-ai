@@ -73,8 +73,9 @@ static std::pair<int, int> isolatedPathFind(Map &map, int depth, Direction *outD
             continue;
 
         map.move(dir, SELF);
-
         std::pair<int, int> tmp = isolatedPathFind(map, depth - 1, NULL);
+        map.unmove(dir, SELF);
+
         if (tmp.first < bestDepth) {
             bestDepth = tmp.first;
             bestCount = tmp.second;
@@ -84,8 +85,6 @@ static std::pair<int, int> isolatedPathFind(Map &map, int depth, Direction *outD
             bestCount = tmp.second;
             bestDir = dir;
         }
-
-        map.unmove(dir, SELF);
     }
 
     if (outDir)
@@ -102,10 +101,10 @@ Direction decideMoveIsolatedFromOpponent(Map map)
     try {
         int depth = 0;
         do {
+            dir = tmpDir;
             fprintf(stderr, "isolated path depth %d ==> %s, found depth: %d, count: %d\n", depth, dirToString(dir), depthCount.first, depthCount.second);
 
             ++depth;
-            dir = tmpDir;
             depthCount = isolatedPathFind(map, depth, &tmpDir);
         } while (depthCount.first == 0);
     } catch (...) {

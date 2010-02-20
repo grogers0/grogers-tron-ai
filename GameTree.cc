@@ -275,17 +275,14 @@ static double fitness(const Map &map)
     if (!playerMoves && !enemyMoves)
         return 0.0; // draw
 
-    int voronoi = voronoiTerritory(map);
 
-    /*if (isOpponentIsolated(map)) {
+    if (isOpponentIsolated(map)) {
         int cntPlayer = countReachableSquares(map, SELF);
         int cntEnemy = countReachableSquares(map, ENEMY);
-        if (voronoi != cntPlayer - cntEnemy) {
-            fprintf(stderr, "BUG: cnt player: %d, cnt enemy: %d, voronoi: %d\n", cntPlayer, cntEnemy, voronoi);
-        }
-    }*/
-
-    return voronoi;
+        return cntPlayer - cntEnemy;
+    } else {
+        return voronoiTerritory(map);
+    }
 }
 
 Direction decideMoveMinimax(Map map)
