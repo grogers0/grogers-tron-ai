@@ -18,4 +18,4 @@ MyTronBot: ${OBJECTS} MyTronBot.o
 	g++ ${CXXFLAGS} -c $<
 
 clean:
-	rm -f *.o MyTronBot Replay
+	rm -f *.o MyTronBot
