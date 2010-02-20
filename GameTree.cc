@@ -141,7 +141,7 @@ static std::deque<std::pair<Player, Direction> > choices;
 
 double GameTree::negamax(Node *node, Map &map, int depth,
         double alpha, double beta,
-        int sign, HeuristicFunction fun, Direction *dir)
+        int sign, HeuristicFunction fun, Direction *bestDir)
 {
     if (Time::now() > deadline)
         throw std::runtime_error("time expired for move decision");
@@ -151,30 +151,31 @@ double GameTree::negamax(Node *node, Map &map, int depth,
     }
 
     for (int i = 0; i < 4 && node->children[i]; ++i) {
+        Direction dir = node->children[i]->direction;
 #if 0
         choices.push_back(std::make_pair(signToPlayer(sign), node->children[i]->direction));
 #endif
 
-        map.move(node->children[i]->direction, signToPlayer(sign));
-        double newAlpha = -negamax(node->children[i], map, depth - 1,
+        map.move(dir, signToPlayer(sign));
+        double a = -negamax(node->children[i], map, depth - 1,
                 -beta, -alpha, -sign, fun, NULL);
-        map.unmove(node->children[i]->direction, signToPlayer(sign));
+        map.unmove(dir, signToPlayer(sign));
 
 #if 0
         for (std::deque<std::pair<Player, Direction> >::const_iterator it = choices.begin();
                 it != choices.end(); ++it) {
             fprintf(stderr, "%s %s, ", playerToString(it->first), dirToString(it->second));
         }
-        fprintf(stderr, "new alpha: %g, curr alpha: %g, curr beta: %g\n", newAlpha, alpha, beta);
+        fprintf(stderr, "new alpha: %g, curr alpha: %g, curr beta: %g\n", a, alpha, beta);
         choices.pop_back();
 #endif
 
-        if (newAlpha > alpha) {
-            if (dir)
-                *dir = node->children[i]->direction;
+        if (a > alpha) {
+            if (bestDir)
+                *bestDir = dir;
 
             std::swap(node->children[0], node->children[i]);
-            alpha = newAlpha;
+            alpha = a;
         }
 
         if (alpha >= beta)
