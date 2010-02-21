@@ -4,7 +4,7 @@
 # don't worry about it. Just use Visual C++ Express Edition or
 # Dev-C++ to work on your code.
 
-CXXFLAGS=-O2 -march=native -pg -Wall -g
+CXXFLAGS=-O2 -march=native -pg -Wall -g -fno-inline-functions-called-once
 LINKFLAGS=
 
 all: MyTronBot
@@ -18,4 +18,4 @@ MyTronBot: ${OBJECTS} MyTronBot.o
 	g++ ${CXXFLAGS} -c $<
 
 clean:
-	rm -f *.o MyTronBot *.gcda gmon.out core*
+	rm -f *.o MyTronBot *.gcda core*

@@ -24,12 +24,9 @@ class GameTree
 
         Direction decideMove(Map &map, int depth, HeuristicFunction fun);
 
-        void extendTree(Map &map, int plies);
-
     private:
         struct Node;
-        void buildTree(Node *node, Map &map, int plies, Player player);
-        void extendTree(Node *node, Map &map, int plies, Player player);
+        void buildTreeOneLevel(Node *node, Map &map, Player player);
         int negamax(Node *node, Map &map, int depth,
                 int alpha, int beta,
                 int sign, HeuristicFunction fun, Direction *dir);
@@ -110,11 +107,8 @@ Direction GameTree::decideMove(Map &map, int depth, HeuristicFunction fun)
     return bestDir;
 }
 
-void GameTree::buildTree(Node *node, Map &map, int plies, Player player)
+void GameTree::buildTreeOneLevel(Node *node, Map &map, Player player)
 {
-    if (plies <= 0)
-        return;
-
     if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
         return;
 
@@ -131,33 +125,7 @@ void GameTree::buildTree(Node *node, Map &map, int plies, Player player)
 
         node->children[cnt] = &nodesAlloc.back();
 
-        map.move(dir, player);
-        buildTree(node->children[cnt], map, plies - 1, otherPlayer(player));
-        map.unmove(dir, player);
-
         ++cnt;
-    }
-}
-
-void GameTree::extendTree(Map &map, int plies)
-{
-    extendTree(root, map, plies, SELF);
-}
-
-void GameTree::extendTree(Node *node, Map &map, int plies, Player player)
-{
-    if (plies <= 0)
-        return;
-
-    if (!node->children[0]) {
-        buildTree(node, map, plies, player);
-        return;
-    }
-
-    for (int i = 0; i < 4 && node->children[i]; ++i) {
-        map.move(node->children[i]->direction, player);
-        extendTree(node->children[i], map, plies - 1, otherPlayer(player));
-        map.unmove(node->children[i]->direction, player);
     }
 }
 
@@ -175,7 +143,7 @@ int GameTree::negamax(Node *node, Map &map, int depth,
         throw std::runtime_error("time expired for move decision");
 
     if (depth > 0 && node->children[0] == NULL) {
-        buildTree(node, map, 1, signToPlayer(sign));
+        buildTreeOneLevel(node, map, signToPlayer(sign));
     }
 
     if (depth == 0 || node->children[0] == NULL) {
@@ -227,80 +195,101 @@ int GameTree::negamax(Node *node, Map &map, int depth,
     return alpha;
 }
 
-void fillBoardVoronoi(std::vector<signed char> &board, int depth,
-        std::vector<std::pair<unsigned char, unsigned char> > &posVisits,
+void fillBoardVoronoi(std::vector<int> &board, int depth,
+        std::vector<std::pair<int, int> > &posVisits,
         int height)
 {
-    std::vector<std::pair<unsigned char, unsigned char> > posVisitsOut;
+    std::vector<std::pair<int, int> > posVisitsOut;
     posVisitsOut.reserve(posVisits.capacity());
 
-    for (std::vector<std::pair<unsigned char, unsigned char> >::const_iterator it = posVisits.begin();
+    for (std::vector<std::pair<int, int> >::const_iterator it = posVisits.begin();
             it != posVisits.end(); ++it) {
         int x = it->first, y = it->second;
         if (board[x*height + y + 1] > depth) {
             board[x*height + y + 1] = depth;
-            posVisitsOut.push_back(std::pair<unsigned char, unsigned char>(x, y + 1));
+            posVisitsOut.push_back(std::pair<int, int>(x, y + 1));
         }
         if (board[x*height + y - 1] > depth) {
             board[x*height + y - 1] = depth;
-            posVisitsOut.push_back(std::pair<unsigned char, unsigned char>(x, y - 1));
+            posVisitsOut.push_back(std::pair<int, int>(x, y - 1));
         }
         if (board[(x + 1)*height + y] > depth) {
             board[(x + 1)*height + y] = depth;
-            posVisitsOut.push_back(std::pair<unsigned char, unsigned char>(x + 1, y));
+            posVisitsOut.push_back(std::pair<int, int>(x + 1, y));
         }
         if (board[(x - 1)*height + y] > depth) {
             board[(x - 1)*height + y] = depth;
-            posVisitsOut.push_back(std::pair<unsigned char, unsigned char>(x - 1, y));
+            posVisitsOut.push_back(std::pair<int, int>(x - 1, y));
         }
     }
 
     posVisits.swap(posVisitsOut);
 }
 
-// count of squares player can reach first minus squares enemy can reach first
-static int voronoiTerritory(const Map &map)
+void setupVoronoiBoards(const Map &map,
+        std::vector<int> &boardPlayer,
+        std::vector<int> &boardEnemy)
 {
     int width = map.width();
     int height = map.height();
 
-    std::vector<signed char> boardPlayer(width*height);
+    boardPlayer.resize(width*height);
 
     for (int i = 0; i < width; ++i) {
         for (int j = 0; j < height; ++j) {
-            boardPlayer[i*height + j] = map.isWall(i, j) ? SCHAR_MIN : SCHAR_MAX;
+            boardPlayer[i*height + j] = map.isWall(i, j) ? INT_MIN : INT_MAX;
         }
     }
 
-    boardPlayer[map.myX()*height + map.myY()] = SCHAR_MIN;
-    boardPlayer[map.enemyX()*height + map.enemyY()] = SCHAR_MIN;
+    boardPlayer[map.myX()*height + map.myY()] = INT_MIN;
+    boardPlayer[map.enemyX()*height + map.enemyY()] = INT_MIN;
 
-    std::vector<signed char> boardEnemy(boardPlayer);
+    boardEnemy = boardPlayer;
+}
 
-    std::vector<std::pair<unsigned char, unsigned char> > posVisits;
+int countVoronoiBoards(int width, int height,
+        const std::vector<int> &boardPlayer,
+        const std::vector<int> &boardEnemy)
+{
+    int cnt = 0;
+    for (int i = 0; i < width; ++i) {
+        for (int j = 0; j < height; ++j) {
+            int pos = i*height + j;
+            int playerDepth = boardPlayer[pos];
+            int enemyDepth = boardEnemy[pos];
+            if (playerDepth < enemyDepth)
+                ++cnt;
+            else if (playerDepth > enemyDepth)
+                --cnt;
+        }
+    }
+    return cnt;
+}
+
+// count of squares player can reach first minus squares enemy can reach first
+int voronoiTerritory(const Map &map)
+{
+    int width = map.width();
+    int height = map.height();
+
+    std::vector<int> boardPlayer, boardEnemy;
+
+    setupVoronoiBoards(map, boardPlayer, boardEnemy);
+
+    std::vector<std::pair<int, int> > posVisits;
     posVisits.reserve(width*2 + height*2);
-    posVisits.push_back(std::pair<unsigned char, unsigned char>(map.myX(), map.myY()));
+    posVisits.push_back(std::pair<int, int>(map.myX(), map.myY()));
     for (int depth = 1; !posVisits.empty(); ++depth) {
         fillBoardVoronoi(boardPlayer, depth, posVisits, height);
     }
 
     posVisits.clear();
-    posVisits.push_back(std::pair<unsigned char, unsigned char>(map.enemyX(), map.enemyY()));
+    posVisits.push_back(std::pair<int, int>(map.enemyX(), map.enemyY()));
     for (int depth = 1; !posVisits.empty(); ++depth) {
         fillBoardVoronoi(boardEnemy, depth, posVisits, height);
     }
 
-    int cnt = 0;
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < height; ++j) {
-            if (boardPlayer[i*height + j] < boardEnemy[i*height + j])
-                ++cnt;
-            else if (boardPlayer[i*height + j] > boardEnemy[i*height + j])
-                --cnt;
-        }
-    }
-
-    return cnt;
+    return countVoronoiBoards(width, height, boardPlayer, boardEnemy);
 }
 
 static int fitness(const Map &map)
