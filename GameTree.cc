@@ -10,9 +10,11 @@
 #include <cmath>
 #include <cassert>
 
-static const double INF = std::numeric_limits<double>::infinity();
+//#define DUMP_STATE
 
-typedef double (*HeuristicFunction)(const Map &map);
+static const int INF = INT_MAX;
+
+typedef int (*HeuristicFunction)(const Map &map);
 
 class GameTree
 {
@@ -28,8 +30,8 @@ class GameTree
         struct Node;
         void buildTree(Node *node, Map &map, int plies, Player player);
         void extendTree(Node *node, Map &map, int plies, Player player);
-        double negamax(Node *node, Map &map, int depth,
-                double alpha, double beta,
+        int negamax(Node *node, Map &map, int depth,
+                int alpha, int beta,
                 int sign, HeuristicFunction fun, Direction *dir);
 
         struct Node
@@ -96,7 +98,9 @@ Direction GameTree::decideMove(Map &map, int depth, HeuristicFunction fun)
 {
     Direction bestDir = NORTH;
 
-    double alpha = negamax(root, map, depth, -INF, INF, 1, fun, &bestDir);
+    int alpha = negamax(root, map, depth, -INF, INF, 1, fun, &bestDir);
+
+    fprintf(stderr, "depth: %d, dir: %s, alpha: %d\n", depth, dirToString(bestDir), alpha);
 
     if (alpha == -INF) {
         fprintf(stderr, "best alpha is -Infinity, we lose no matter what...\n");
@@ -158,12 +162,13 @@ void GameTree::extendTree(Node *node, Map &map, int plies, Player player)
 }
 
 
-#if 0
+#ifdef DUMP_STATE
 static std::deque<std::pair<Player, Direction> > choices;
+FILE *fp = fopen("dump.txt", "w");
 #endif
 
-double GameTree::negamax(Node *node, Map &map, int depth,
-        double alpha, double beta,
+int GameTree::negamax(Node *node, Map &map, int depth,
+        int alpha, int beta,
         int sign, HeuristicFunction fun, Direction *bestDir)
 {
     if (Time::now() > deadline)
@@ -177,33 +182,43 @@ double GameTree::negamax(Node *node, Map &map, int depth,
         return sign * fun(map);
     }
 
+#ifdef DUMP_STATE
+    if (choices.empty())
+        map.print(fp);
+#endif
+
     for (int i = 0; i < 4 && node->children[i]; ++i) {
         Direction dir = node->children[i]->direction;
-#if 0
+#ifdef DUMP_STATE
         choices.push_back(std::make_pair(signToPlayer(sign), node->children[i]->direction));
 #endif
 
         map.move(dir, signToPlayer(sign));
-        double a = -negamax(node->children[i], map, depth - 1,
+        int a = -negamax(node->children[i], map, depth - 1,
                 -beta, -alpha, -sign, fun, NULL);
         map.unmove(dir, signToPlayer(sign));
 
-#if 0
-        for (std::deque<std::pair<Player, Direction> >::const_iterator it = choices.begin();
-                it != choices.end(); ++it) {
-            fprintf(stderr, "%s %s, ", playerToString(it->first), dirToString(it->second));
-        }
-        fprintf(stderr, "new alpha: %g, curr alpha: %g, curr beta: %g\n", a, alpha, beta);
-        choices.pop_back();
+        if (a > alpha) {
+#ifdef DUMP_STATE
+            if (a < beta) { // dont print beta cutoffs
+                for (std::deque<std::pair<Player, Direction> >::const_iterator it = choices.begin();
+                        it != choices.end(); ++it) {
+                    fprintf(fp, "%s %s, ", playerToString(it->first), dirToString(it->second));
+                }
+                fprintf(fp, "improves new alpha: %d, curr alpha: %d, curr beta: %d\n", a, alpha, beta);
+            }
 #endif
 
-        if (a > alpha) {
             if (bestDir)
                 *bestDir = dir;
 
             node->promoteChild(i);
             alpha = a;
         }
+
+#ifdef DUMP_STATE
+        choices.pop_back();
+#endif
 
         if (alpha >= beta)
             break;
@@ -288,10 +303,10 @@ static int voronoiTerritory(const Map &map)
     return cnt;
 }
 
-static double fitness(const Map &map)
+static int fitness(const Map &map)
 {
     if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
-        return 0.0; // draw
+        return 0; // draw
 
     int playerMoves = map.cntMoves(SELF);
     int enemyMoves = map.cntMoves(ENEMY);
@@ -301,7 +316,7 @@ static double fitness(const Map &map)
     if (playerMoves && !enemyMoves)
         return INF; // player won
     if (!playerMoves && !enemyMoves)
-        return 0.0; // draw
+        return 0; // draw
 
 
     if (isOpponentIsolated(map)) {
@@ -319,12 +334,16 @@ Direction decideMoveMinimax(Map map)
 
     Direction dir = NORTH;
     try {
-        for (int depth = 1; depth < 100; ++depth) {
+        for (int depth = 1; depth < 100; depth += 1) {
             dir = tree.decideMove(map, depth, &fitness);
             fprintf(stderr, "Depth %d ==> %s\n", depth, dirToString(dir));
         }
     } catch (...) {
     }
+
+#ifdef DUMP_STATE
+    choices.clear();
+#endif
 
     return dir;
 }

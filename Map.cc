@@ -27,21 +27,21 @@ const char *playerToString(Player p)
 }
 
 
-void Map::print() const
+void Map::print(FILE *fp) const
 {
     for (int y = 0; y < map_height; ++y) {
         for (int x = 0; x < map_width; ++x) {
             if (player_one_x == x && player_one_y == y)
-                fprintf(stderr, "1");
+                fprintf(fp, "1");
             else if (player_two_x == x && player_two_y == y)
-                fprintf(stderr, "2");
+                fprintf(fp, "2");
             else if (isWall(x, y))
-                fprintf(stderr, "#");
+                fprintf(fp, "#");
             else
-                fprintf(stderr, " ");
+                fprintf(fp, " ");
         }
 
-        fprintf(stderr, "\n");
+        fprintf(fp, "\n");
     }
 }
 

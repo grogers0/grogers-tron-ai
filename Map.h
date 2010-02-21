@@ -52,7 +52,7 @@ class Map
 
         int cntMoves(Player p) const;
 
-        void print() const;
+        void print(FILE *) const;
 
         int myX() const;
         int myY() const;
