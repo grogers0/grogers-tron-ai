@@ -195,7 +195,7 @@ int GameTree::negamax(Node *node, Map &map, int depth,
     return alpha;
 }
 
-void fillBoardVoronoi(std::vector<int> &board, int depth,
+static void fillBoardVoronoi(std::vector<int> &board, int depth,
         std::vector<std::pair<int, int> > &posVisits,
         int height)
 {
@@ -226,7 +226,7 @@ void fillBoardVoronoi(std::vector<int> &board, int depth,
     posVisits.swap(posVisitsOut);
 }
 
-void setupVoronoiBoards(const Map &map,
+static void setupVoronoiBoards(const Map &map,
         std::vector<int> &boardPlayer,
         std::vector<int> &boardEnemy)
 {
@@ -247,7 +247,7 @@ void setupVoronoiBoards(const Map &map,
     boardEnemy = boardPlayer;
 }
 
-int countVoronoiBoards(int width, int height,
+static int countVoronoiBoards(int width, int height,
         const std::vector<int> &boardPlayer,
         const std::vector<int> &boardEnemy)
 {
@@ -267,7 +267,7 @@ int countVoronoiBoards(int width, int height,
 }
 
 // count of squares player can reach first minus squares enemy can reach first
-int voronoiTerritory(const Map &map)
+static int voronoiTerritory(const Map &map)
 {
     int width = map.width();
     int height = map.height();
@@ -292,6 +292,91 @@ int voronoiTerritory(const Map &map)
     return countVoronoiBoards(width, height, boardPlayer, boardEnemy);
 }
 
+static bool fillBoardDistanceToOpponent(std::vector<bool> &board,
+        std::vector<std::pair<int, int> > &posVisits,
+        int height, int oppX, int oppY)
+{
+    std::vector<std::pair<int, int> > posVisitsOut;
+    posVisitsOut.reserve(posVisits.capacity());
+
+    for (std::vector<std::pair<int, int> >::const_iterator it = posVisits.begin();
+            it != posVisits.end(); ++it) {
+        int x = it->first, y = it->second;
+
+        if (x == oppX && y == oppY)
+            return true;
+
+        if (!board[x*height + y + 1]) {
+            board[x*height + y + 1] = true;
+            posVisitsOut.push_back(std::make_pair(x, y + 1));
+        }
+        if (!board[x*height + y - 1]) {
+            board[x*height + y - 1] = true;
+            posVisitsOut.push_back(std::make_pair(x, y - 1));
+        }
+        if (!board[(x + 1)*height + y]) {
+            board[(x + 1)*height + y] = true;
+            posVisitsOut.push_back(std::make_pair(x + 1, y));
+        }
+        if (!board[(x - 1)*height + y]) {
+            board[(x - 1)*height + y] = true;
+            posVisitsOut.push_back(std::make_pair(x - 1, y));
+        }
+    }
+
+    posVisits.swap(posVisitsOut);
+    return false;
+}
+
+static int distanceToOpponent(const Map &map)
+{
+    int width = map.width();
+    int height = map.height();
+
+    std::vector<bool> board(map.getBoard());
+    board[map.myX()*height + map.myY()] = false;
+    board[map.enemyX()*height + map.enemyY()] = false;
+
+    std::vector<std::pair<int, int> > posVisits;
+    posVisits.reserve(width*2 + height*2);
+    posVisits.push_back(std::pair<int, int>(map.myX(), map.myY()));
+    for (int depth = 0; !posVisits.empty(); ++depth) {
+        if (fillBoardDistanceToOpponent(board, posVisits, height, map.enemyX(),
+                    map.enemyY())) {
+            return depth;
+        }
+    }
+    return -1;
+}
+
+static int countCorridorSquares(const Map &map)
+{
+    int width = map.width();
+    int height = map.height();
+    int cnt = 0;
+
+    for (int i = 0; i < width; ++i) {
+        for (int j = 0; j < height; ++j) {
+            if (map.isWall(i, j))
+                continue;
+
+            int moves = 0;
+            if (!map.isWall(i - 1, j))
+                ++moves;
+            if (!map.isWall(i + 1, j))
+                ++moves;
+            if (!map.isWall(i, j - 1))
+                ++moves;
+            if (!map.isWall(i, j + 1))
+                ++moves;
+
+            if (moves <= 2)
+                ++cnt;
+        }
+    }
+    return cnt;
+}
+
 static int fitness(const Map &map)
 {
     if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
@@ -313,7 +398,13 @@ static int fitness(const Map &map)
         int cntEnemy = countReachableSquares(map, ENEMY);
         return cntPlayer - cntEnemy;
     } else {
-        return voronoiTerritory(map);
+        int voronoi = voronoiTerritory(map);
+        if (voronoi == 0){
+            int dist = distanceToOpponent(map);
+            int corridors = countCorridorSquares(map);
+            return -dist - corridors;
+        }
+        return voronoi;
     }
 }
 

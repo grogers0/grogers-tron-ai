@@ -52,6 +52,8 @@ class Map
 
         int cntMoves(Player p) const;
 
+        const std::vector<bool> &getBoard() const;
+
         void print(FILE *) const;
 
         int myX() const;
@@ -218,6 +220,11 @@ inline int Map::cntMoves(Player p) const
             ++cnt;
     }
     return cnt;
+}
+
+inline const std::vector<bool> &Map::getBoard() const
+{
+    return is_wall;
 }
 
 // Get my X and Y position. These are zero-based.
