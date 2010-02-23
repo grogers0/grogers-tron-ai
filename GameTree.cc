@@ -252,16 +252,13 @@ static int countVoronoiBoards(int width, int height,
         const std::vector<int> &boardEnemy)
 {
     int cnt = 0;
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < height; ++j) {
-            int pos = i*height + j;
-            int playerDepth = boardPlayer[pos];
-            int enemyDepth = boardEnemy[pos];
-            if (playerDepth < enemyDepth)
-                ++cnt;
-            else if (playerDepth > enemyDepth)
-                --cnt;
-        }
+    for (int i = 0; i < width*height; ++i) {
+        int playerDepth = boardPlayer[i];
+        int enemyDepth = boardEnemy[i];
+        if (playerDepth < enemyDepth)
+            ++cnt;
+        else if (playerDepth > enemyDepth)
+            --cnt;
     }
     return cnt;
 }

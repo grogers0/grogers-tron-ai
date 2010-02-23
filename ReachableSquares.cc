@@ -5,7 +5,7 @@
 #include <utility>
 
 static inline int cntMovesFromSquare(const std::vector<bool> &board,
-        int x, int y, int width, int height)
+        int x, int y, int height)
 {
     int cnt = 0;
     if (!board[(x - 1)*height + y])
@@ -48,22 +48,20 @@ static void fillUnreachableSquares(std::vector<bool> &board, int x, int y,
 
     floodFill(boardReachFilled, x, y, width, height);
 
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < height; ++j) {
-            if (!board[i*height + j] && !boardReachFilled[i*height + j])
-                board[i*height + j] = true;
-        }
+    for (int i = 0; i < width*height; ++i) {
+        if (!board[i] && !boardReachFilled[i])
+            board[i] = true;
     }
 }
 
-static void pruneOneCorridor(std::vector<bool> &board, int x, int y,
-        int px, int py, int width, int height,
+static void visitSquareForPruning(std::vector<bool> &board, int x, int y,
+        int px, int py, int height,
+        std::map<std::pair<int, int>, int> &corridorEntrances);
+
+static void pruneOneDeadEnd(std::vector<bool> &board, int x, int y,
+        int px, int py, int height,
         std::map<std::pair<int, int>, int> &corridorEntrances)
 {
-    // dont count player square as a corridor
-    if (x == px && y == py)
-        return;
-
     int cnt = 1;
 
     {
@@ -75,40 +73,54 @@ static void pruneOneCorridor(std::vector<bool> &board, int x, int y,
         }
     }
 
-    int newX = x, newY = y;
+    int x2 = x, y2 = y;
     if (!board[(x + 1)*height + y])
-        newX = x + 1;
+        x2 = x + 1;
     else if (!board[(x - 1)*height + y])
-        newX = x - 1;
+        x2 = x - 1;
     else if (!board[x*height + y + 1])
-        newY = y + 1;
+        y2 = y + 1;
     else if (!board[x*height + y - 1])
-        newY = y - 1;
+        y2 = y - 1;
     else
         assert(false);
 
     board[x*height + y] = true;
 
     std::map<std::pair<int, int>, int>::iterator it =
-        corridorEntrances.find(std::make_pair(newX, newY));
+        corridorEntrances.find(std::make_pair(x2, y2));
     if (it == corridorEntrances.end())
-        corridorEntrances.insert(std::make_pair(std::make_pair(newX, newY), cnt));
-    else if (it->second < cnt)
+        corridorEntrances.insert(std::make_pair(std::make_pair(x2, y2), cnt));
+    else if (cnt > it->second)
         it->second = cnt;
 
-    if (cntMovesFromSquare(board, newX, newY, width, height) == 1)
-        pruneOneCorridor(board, newX, newY, px, py, width, height, corridorEntrances);
+    visitSquareForPruning(board, x2, y2, px, py, height, corridorEntrances);
 }
 
-static int pruneCorridors(std::vector<bool> &board, int x, int y,
+static void visitSquareForPruning(std::vector<bool> &board, int x, int y,
+        int px, int py, int height,
+        std::map<std::pair<int, int>, int> &corridorEntrances)
+{
+    if (board[x*height + y])
+        return;
+
+    // player square can't be a corridor
+    if (x == px && y == py)
+        return;
+
+    int moves = cntMovesFromSquare(board, x, y, height);
+    if (moves == 1)
+        pruneOneDeadEnd(board, x, y, px, py, height, corridorEntrances);
+}
+
+static int pruneCorridors(std::vector<bool> &board, int px, int py,
         int width, int height)
 {
     std::map<std::pair<int, int>, int> corridorEntrances;
 
     for (int i = 1; i < width - 1; ++i) {
         for (int j = 1; j < height - 1; ++j) {
-            if (cntMovesFromSquare(board, i, j, width, height) == 1)
-                pruneOneCorridor(board, i, j, x, y, width, height, corridorEntrances);
+            visitSquareForPruning(board, i, j, px, py, height, corridorEntrances);
         }
     }
 
@@ -126,7 +138,6 @@ int countReachableSquares(const Map &map, Player player)
 {
     int width = map.width();
     int height = map.height();
-    std::vector<bool> board(width*height);
 
     int x, y;
     switch (player) {
@@ -140,11 +151,7 @@ int countReachableSquares(const Map &map, Player player)
             break;
     }
 
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < height; ++j) {
-            board[i*height + j] = map.isWall(i, j);
-        }
-    }
+    std::vector<bool> board(map.getBoard());
 
     board[map.myX()*height + map.myY()] = false;
     board[map.enemyX()*height + map.enemyY()] = false;
