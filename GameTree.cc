@@ -346,6 +346,24 @@ static int distanceToOpponent(const Map &map)
     return -1;
 }
 
+// note must be tested to have 1 xmove and 1 ymove before entry
+static bool isCornerCorridor(const Map &map, int x, int y)
+{
+    int x2, y2;
+
+    if (!map.isWall(x - 1, y))
+        x2 = x - 1;
+    else
+        x2 = x + 1;
+
+    if (!map.isWall(x, y - 1))
+        y2 = y - 1;
+    else 
+        y2 = y + 1;
+
+    return map.isWall(x2, y2);
+}
+
 static int countCorridorSquares(const Map &map)
 {
     int width = map.width();
@@ -369,7 +387,8 @@ static int countCorridorSquares(const Map &map)
 
             if (xmoves + ymoves <= 1 ||
                     (ymoves == 2 && xmoves == 0) ||
-                    (ymoves == 0 && xmoves == 2)) {
+                    (ymoves == 0 && xmoves == 2) ||
+                    (xmoves == 1 && ymoves == 1 && isCornerCorridor(map, i, j))) {
                 ++cnt;
             }
         }
