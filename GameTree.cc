@@ -357,18 +357,21 @@ static int countCorridorSquares(const Map &map)
             if (map.isWall(i, j))
                 continue;
 
-            int moves = 0;
+            int xmoves = 0, ymoves = 0;
             if (!map.isWall(i - 1, j))
-                ++moves;
+                ++xmoves;
             if (!map.isWall(i + 1, j))
-                ++moves;
+                ++xmoves;
             if (!map.isWall(i, j - 1))
-                ++moves;
+                ++ymoves;
             if (!map.isWall(i, j + 1))
-                ++moves;
+                ++ymoves;
 
-            if (moves <= 2)
+            if (xmoves + ymoves <= 1 ||
+                    (ymoves == 2 && xmoves == 0) ||
+                    (ymoves == 0 && xmoves == 2)) {
                 ++cnt;
+            }
         }
     }
     return cnt;
