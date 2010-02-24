@@ -298,6 +298,19 @@ static int pruneCorridors(std::vector<bool> &board, int px, int py)
     return cnt;
 }
 
+static int countReachable(const std::vector<bool> &boardIn, int px, int py)
+{
+    std::vector<bool> board(boardIn);
+
+    board[px*height + py] = false;
+
+    fillUnreachableSquares(board, px, py);
+
+    int corridorDepth = pruneCorridors(board, px, py);
+
+    return floodFill(board, px, py) + corridorDepth;
+}
+
 int countReachableSquares(const Map &map, Player player)
 {
     int x, y;
@@ -312,14 +325,5 @@ int countReachableSquares(const Map &map, Player player)
             break;
     }
 
-    std::vector<bool> board(map.getBoard());
-
-    board[map.myX()*height + map.myY()] = false;
-    board[map.enemyX()*height + map.enemyY()] = false;
-
-    fillUnreachableSquares(board, x, y);
-
-    int corridorDepth = pruneCorridors(board, x, y);
-
-    return floodFill(board, x, y) - 1 + corridorDepth;
+    return countReachable(map.getBoard(), x, y) - 1;
 }
