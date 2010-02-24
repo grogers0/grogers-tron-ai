@@ -52,17 +52,22 @@ bool isOpponentIsolated(const Map &map)
             map.enemyX(), map.enemyY());
 }
 
-static std::pair<int, int> isolatedPathFind(Map &map, int depth, Direction *outDir)
+static std::pair<int, int> isolatedPathFind(Map &map, int truedepth, int depth, Direction *outDir)
 {
     if (Time::now() > deadline)
         throw std::runtime_error("time expired");
 
     if (depth <= 0)
-        return std::make_pair(depth, countReachableSquares(map, SELF));
+        return std::make_pair(truedepth, countReachableSquares(map, SELF));
 
-    int bestCount = -INT_MAX;
-    int bestDepth = INT_MAX;
+    int bestCount = 0;
+    int bestTrueDepth = truedepth;
     Direction bestDir = NORTH;
+
+    // singularity enhancement
+    int newdepth = depth - 1;
+    if (map.cntMoves(SELF) == 1)
+        newdepth = depth;
 
     for (Direction dir = DIR_MIN; dir <= DIR_MAX;
             dir = static_cast<Direction>(dir + 1)) {
@@ -70,15 +75,11 @@ static std::pair<int, int> isolatedPathFind(Map &map, int depth, Direction *outD
             continue;
 
         map.move(dir, SELF);
-        std::pair<int, int> tmp = isolatedPathFind(map, depth - 1, NULL);
+        std::pair<int, int> tmp = isolatedPathFind(map, truedepth + 1, newdepth, NULL);
         map.unmove(dir, SELF);
 
-        if (tmp.first < bestDepth) {
-            bestDepth = tmp.first;
-            bestCount = tmp.second;
-            bestDir = dir;
-        } else if (tmp.first == bestDepth &&
-                tmp.second > bestCount) {
+        if (tmp.first + tmp.second > bestTrueDepth + bestCount) {
+            bestTrueDepth = tmp.first;
             bestCount = tmp.second;
             bestDir = dir;
         }
@@ -87,7 +88,7 @@ static std::pair<int, int> isolatedPathFind(Map &map, int depth, Direction *outD
     if (outDir)
         *outDir = bestDir;
 
-    return std::make_pair(bestDepth, bestCount);
+    return std::make_pair(bestTrueDepth, bestCount);
 }
 
 Direction decideMoveIsolatedFromOpponent(Map map)
@@ -102,8 +103,8 @@ Direction decideMoveIsolatedFromOpponent(Map map)
             fprintf(stderr, "isolated path depth %d ==> %s, found depth: %d, count: %d\n", depth, dirToString(dir), depthCount.first, depthCount.second);
 
             ++depth;
-            depthCount = isolatedPathFind(map, depth, &tmpDir);
-        } while (depthCount.first == 0);
+            depthCount = isolatedPathFind(map, 0, depth, &tmpDir);
+        } while (depthCount.first >= depth);
     } catch (...) {
     }
 

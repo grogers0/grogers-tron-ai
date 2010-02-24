@@ -160,15 +160,22 @@ int GameTree::negamax_quiescence(Node *node, Map &map, int depth,
             return sign * fun(map);
     }
 
-    if (depth == 0) {
+    if (depth == 0 ||
+            (isOpponentIsolated(map) && signToPlayer(sign) == SELF)) { // quiet enough
         return sign * fun(map);
     }
+
+    // singularity enhancement - if only one possible move, don't let it count
+    // towards the depth
+    int newdepth = depth - 1;
+    if (!node->children[1])
+        newdepth = depth;
 
     for (int i = 0; i < 4 && node->children[i]; ++i) {
         Direction dir = node->children[i]->direction;
 
         map.move(dir, signToPlayer(sign));
-        int a = -negamax_quiescence(node->children[i], map, depth - 1,
+        int a = -negamax_quiescence(node->children[i], map, newdepth,
                 -beta, -alpha, -sign, fun);
         map.unmove(dir, signToPlayer(sign));
 
@@ -203,11 +210,17 @@ int GameTree::negamax_normal(Node *node, Map &map, int depth,
             return negamax_quiescence(node, map, 4, alpha, beta, sign, fun);
     }
 
+    // singularity enhancement - if only one possible move, don't let it count
+    // towards the depth
+    int newdepth = depth - 1;
+    if (!node->children[1])
+        newdepth = depth;
+
     for (int i = 0; i < 4 && node->children[i]; ++i) {
         Direction dir = node->children[i]->direction;
 
         map.move(dir, signToPlayer(sign));
-        int a = -negamax_normal(node->children[i], map, depth - 1,
+        int a = -negamax_normal(node->children[i], map, newdepth,
                 -beta, -alpha, -sign, fun, NULL);
         map.unmove(dir, signToPlayer(sign));
 
