@@ -105,36 +105,36 @@ static void markHallwayNotCorridor(std::vector<bool> &board, int x, int y)
     board[x*height + y] = false;
 }
 
-// we should really reach the end of the hallway and recur to refind the new
-// pruned corridors in the sub-map. Right now it makes the isolated find want
-// to try to trap itself into a corridor to inflate its score...
-int floodFillAccEntrances(std::vector<bool> &board, int x, int y,
+// maintains the greatest dead end in acc, returns the count of the rest of the
+// squares
+int floodFillAccEntrances(std::vector<bool> &board, int x, int y, int &acc,
         std::map<std::pair<int, int>, int> &corridorEntrances)
 {
     board[x*height + y] = true;
-
-    int cnt = 1;
 
     {
         std::map<std::pair<int, int>, int>::iterator it =
             corridorEntrances.find(std::make_pair(x, y));
         if (it != corridorEntrances.end()) {
-            cnt = it->second + 1;
+            if (it->second > acc)
+                acc = it->second;
             corridorEntrances.erase(it);
         }
     }
 
+    int cnt = 1;
+
     if (!board[(x - 1)*height + y])
-        cnt += floodFillAccEntrances(board, x - 1, y, corridorEntrances);
+        cnt += floodFillAccEntrances(board, x - 1, y, acc, corridorEntrances);
 
     if (!board[(x + 1)*height + y])
-        cnt += floodFillAccEntrances(board, x + 1, y, corridorEntrances);
+        cnt += floodFillAccEntrances(board, x + 1, y, acc, corridorEntrances);
 
     if (!board[x*height + (y - 1)])
-        cnt += floodFillAccEntrances(board, x, y - 1, corridorEntrances);
+        cnt += floodFillAccEntrances(board, x, y - 1, acc, corridorEntrances);
 
     if (!board[x*height + (y + 1)])
-        cnt += floodFillAccEntrances(board, x, y + 1, corridorEntrances);
+        cnt += floodFillAccEntrances(board, x, y + 1, acc, corridorEntrances);
 
     return cnt;
 }
@@ -181,18 +181,21 @@ static void pruneOneCorridor(std::vector<bool> &board, int x, int y,
         n = 0;
     }
 
-    int cnt = 1;
+    int cnt = 0;
 
     {
         std::map<std::pair<int, int>, int>::iterator it =
             corridorEntrances.find(std::make_pair(x, y));
         if (it != corridorEntrances.end()) {
-            cnt = it->second + 1;
+            cnt = it->second;
             corridorEntrances.erase(it);
         }
     }
 
-    cnt += floodFillAccEntrances(board, xn[n], yn[n], corridorEntrances);
+    int cnt2 = 1;
+    
+    cnt2 += floodFillAccEntrances(board, xn[n], yn[n], cnt, corridorEntrances);
+    cnt += cnt2;
 
     std::map<std::pair<int, int>, int>::iterator it =
         corridorEntrances.find(std::make_pair(xn[pside], yn[pside]));
@@ -267,6 +270,17 @@ static int pruneCorridors(std::vector<bool> &board, int px, int py)
 
     notCorridors.clear();
     notCorridors.resize(width*height);
+
+    // as an approximation, cancel all the dead end single hallways first, to
+    // avoid a bug where the flood fill of an open space after a hallway reports
+    // incorrectly
+    for (int i = 1; i < width - 1; ++i) {
+        for (int j = 1; j < height - 1; ++j) {
+            int moves = cntMovesFromSquare(board, i, j);
+            if (moves == 1)
+                pruneOneDeadEnd(board, i, j, px, py, corridorEntrances);
+        }
+    }
 
     for (int i = 1; i < width - 1; ++i) {
         for (int j = 1; j < height - 1; ++j) {
