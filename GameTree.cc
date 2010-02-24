@@ -449,11 +449,11 @@ static int fitness(const Map &map)
         return cntPlayer - cntEnemy;
     } else {
         int voronoi = voronoiTerritory(map);
-        if (voronoi == 0){
+        /*if (voronoi == 0){
             int dist = distanceToOpponent(map);
             int corridors = countCorridorSquares(map);
             return -dist - corridors;
-        }
+        }*/
         return voronoi;
     }
 }
