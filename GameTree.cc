@@ -196,8 +196,7 @@ int GameTree::negamax(Node *node, Map &map, int depth,
 }
 
 static void fillBoardVoronoi(std::vector<int> &board, int depth,
-        std::vector<std::pair<int, int> > &posVisits,
-        int height)
+        std::vector<std::pair<int, int> > &posVisits)
 {
     std::vector<std::pair<int, int> > posVisitsOut;
     posVisitsOut.reserve(posVisits.capacity());
@@ -230,9 +229,6 @@ static void setupVoronoiBoards(const Map &map,
         std::vector<int> &boardPlayer,
         std::vector<int> &boardEnemy)
 {
-    int width = map.width();
-    int height = map.height();
-
     boardPlayer.resize(width*height);
 
     for (int i = 0; i < width; ++i) {
@@ -247,8 +243,7 @@ static void setupVoronoiBoards(const Map &map,
     boardEnemy = boardPlayer;
 }
 
-static int countVoronoiBoards(int width, int height,
-        const std::vector<int> &boardPlayer,
+static int countVoronoiBoards(const std::vector<int> &boardPlayer,
         const std::vector<int> &boardEnemy)
 {
     int cnt = 0;
@@ -266,9 +261,6 @@ static int countVoronoiBoards(int width, int height,
 // count of squares player can reach first minus squares enemy can reach first
 static int voronoiTerritory(const Map &map)
 {
-    int width = map.width();
-    int height = map.height();
-
     std::vector<int> boardPlayer, boardEnemy;
 
     setupVoronoiBoards(map, boardPlayer, boardEnemy);
@@ -277,21 +269,21 @@ static int voronoiTerritory(const Map &map)
     posVisits.reserve(width*2 + height*2);
     posVisits.push_back(std::pair<int, int>(map.myX(), map.myY()));
     for (int depth = 1; !posVisits.empty(); ++depth) {
-        fillBoardVoronoi(boardPlayer, depth, posVisits, height);
+        fillBoardVoronoi(boardPlayer, depth, posVisits);
     }
 
     posVisits.clear();
     posVisits.push_back(std::pair<int, int>(map.enemyX(), map.enemyY()));
     for (int depth = 1; !posVisits.empty(); ++depth) {
-        fillBoardVoronoi(boardEnemy, depth, posVisits, height);
+        fillBoardVoronoi(boardEnemy, depth, posVisits);
     }
 
-    return countVoronoiBoards(width, height, boardPlayer, boardEnemy);
+    return countVoronoiBoards(boardPlayer, boardEnemy);
 }
 
 static bool fillBoardDistanceToOpponent(std::vector<bool> &board,
         std::vector<std::pair<int, int> > &posVisits,
-        int height, int oppX, int oppY)
+        int oppX, int oppY)
 {
     std::vector<std::pair<int, int> > posVisitsOut;
     posVisitsOut.reserve(posVisits.capacity());
@@ -327,9 +319,6 @@ static bool fillBoardDistanceToOpponent(std::vector<bool> &board,
 
 static int distanceToOpponent(const Map &map)
 {
-    int width = map.width();
-    int height = map.height();
-
     std::vector<bool> board(map.getBoard());
     board[map.myX()*height + map.myY()] = false;
     board[map.enemyX()*height + map.enemyY()] = false;
@@ -338,7 +327,7 @@ static int distanceToOpponent(const Map &map)
     posVisits.reserve(width*2 + height*2);
     posVisits.push_back(std::pair<int, int>(map.myX(), map.myY()));
     for (int depth = 0; !posVisits.empty(); ++depth) {
-        if (fillBoardDistanceToOpponent(board, posVisits, height, map.enemyX(),
+        if (fillBoardDistanceToOpponent(board, posVisits, map.enemyX(),
                     map.enemyY())) {
             return depth;
         }
@@ -366,8 +355,6 @@ static bool isCornerCorridor(const Map &map, int x, int y)
 
 static int countCorridorSquares(const Map &map)
 {
-    int width = map.width();
-    int height = map.height();
     int cnt = 0;
 
     for (int i = 0; i < width; ++i) {

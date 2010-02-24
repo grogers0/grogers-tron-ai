@@ -37,13 +37,11 @@ inline Player otherPlayer(Player p)
 
 const char *playerToString(Player p);
 
+extern int width, height; // width and height never change, so why bother passing them around
 
 class Map
 {
     public:
-        int width() const;
-        int height() const;
-
         bool isWall(int x, int y) const;
         bool isWall(Direction dir, Player p) const;
 
@@ -96,23 +94,14 @@ class Map
         // The locations of both players.
         int player_one_x, player_one_y;
         int player_two_x, player_two_y;
-
-        // Map dimensions.
-        int map_width, map_height;
 };
-
-// Returns the width of the Tron map.
-inline int Map::width() const { return map_width; }
-
-// Returns the height of the Tron map.
-inline int Map::height() const { return map_height; }
 
 // Returns whether or not the given cell is a wall or not. TRUE means it's
 // a wall, FALSE means it's not a wall, and is passable. Any spaces that are
 // not on the board are deemed to be walls.
 inline bool Map::isWall(int x, int y) const
 {
-    return is_wall[x*map_height + y];
+    return is_wall[x*height + y];
 }
 
 inline bool Map::isWall(Direction dir, Player p) const
@@ -161,7 +150,7 @@ inline void Map::move(Direction dir, Player p)
             return;
     }
 
-    is_wall[(*x)*map_height + (*y)] = true;
+    is_wall[(*x)*height + (*y)] = true;
 
     switch (dir) {
         case NORTH: (*y)--; break;
@@ -172,8 +161,8 @@ inline void Map::move(Direction dir, Player p)
     }
 
     if (p != SELF) {
-        is_wall[player_one_x*map_height + player_one_y] = true;
-        is_wall[player_two_x*map_height + player_two_y] = true;
+        is_wall[player_one_x*height + player_one_y] = true;
+        is_wall[player_two_x*height + player_two_y] = true;
     }
 }
 
@@ -194,7 +183,7 @@ inline void Map::unmove(Direction dir, Player p)
             return;
     }
 
-    is_wall[(*x)*map_height + (*y)] = false;
+    is_wall[(*x)*height + (*y)] = false;
 
     // unmove is backwards the regular move...
     switch (dir) {
@@ -206,8 +195,8 @@ inline void Map::unmove(Direction dir, Player p)
     }
 
     if (p != SELF) {
-        is_wall[player_one_x*map_height + player_one_y] = false;
-        is_wall[player_two_x*map_height + player_two_y] = false;
+        is_wall[player_one_x*height + player_one_y] = false;
+        is_wall[player_two_x*height + player_two_y] = false;
     }
 }
 

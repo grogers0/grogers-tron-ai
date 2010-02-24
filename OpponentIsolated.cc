@@ -9,7 +9,7 @@
 
 
 static bool floodFillReachesOtherSquare(std::vector<bool> &board,
-        int x1, int y1, int x2, int y2, int height)
+        int x1, int y1, int x2, int y2)
 {
     if (x1 == x2 && y1 == y2)
         return true;
@@ -17,39 +17,39 @@ static bool floodFillReachesOtherSquare(std::vector<bool> &board,
     board[x1*height + y1] = true;
 
     if (!board[(x1 - 1)*height + y1] &&
-            floodFillReachesOtherSquare(board, x1 - 1, y1, x2, y2, height))
+            floodFillReachesOtherSquare(board, x1 - 1, y1, x2, y2))
         return true;
 
     if (!board[(x1 + 1)*height + y1] &&
-            floodFillReachesOtherSquare(board, x1 + 1, y1, x2, y2, height))
+            floodFillReachesOtherSquare(board, x1 + 1, y1, x2, y2))
         return true;
 
     if (!board[x1*height + (y1 - 1)] &&
-            floodFillReachesOtherSquare(board, x1, y1 - 1, x2, y2, height))
+            floodFillReachesOtherSquare(board, x1, y1 - 1, x2, y2))
         return true;
 
     if (!board[x1*height + (y1 + 1)] &&
-            floodFillReachesOtherSquare(board, x1, y1 + 1, x2, y2, height))
+            floodFillReachesOtherSquare(board, x1, y1 + 1, x2, y2))
         return true;
 
     return false;
 }
 
 bool squaresReachEachOther(const std::vector<bool> &boardOrig, int x1, int y1,
-        int x2, int y2, int height)
+        int x2, int y2)
 {
     std::vector<bool> board(boardOrig);
 
     board[x1*height + y1] = false;
     board[x2*height + y2] = false;
 
-    return floodFillReachesOtherSquare(board, x1, y1, x2, y2, height);
+    return floodFillReachesOtherSquare(board, x1, y1, x2, y2);
 }
 
 bool isOpponentIsolated(const Map &map)
 {
     return !squaresReachEachOther(map.getBoard(), map.myX(), map.myY(),
-            map.enemyX(), map.enemyY(), map.height());
+            map.enemyX(), map.enemyY());
 }
 
 static std::pair<int, int> isolatedPathFind(Map &map, int depth, Direction *outDir)

@@ -9,6 +9,6 @@ Direction decideMoveIsolatedFromOpponent(Map map);
 int countReachableSquares(const Map &map, Player player);
 Direction decideMoveMinimax(Map);
 bool squaresReachEachOther(const std::vector<bool> &board, int x1, int y1,
-        int x2, int y2, int height);
+        int x2, int y2);
 
 #endif
