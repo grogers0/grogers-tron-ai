@@ -4,7 +4,7 @@
 # don't worry about it. Just use Visual C++ Express Edition or
 # Dev-C++ to work on your code.
 
-CXXFLAGS=-O2
+CXXFLAGS= -g
 LINKFLAGS=
 
 all: MyTronBot

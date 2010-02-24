@@ -4,6 +4,8 @@
 #include <map>
 #include <utility>
 
+static int countReachable(const std::vector<bool> &boardIn, int px, int py);
+
 static inline int cntMovesFromSquare(const std::vector<bool> &board,
         int x, int y)
 {
@@ -105,40 +107,6 @@ static void markHallwayNotCorridor(std::vector<bool> &board, int x, int y)
     board[x*height + y] = false;
 }
 
-// maintains the greatest dead end in acc, returns the count of the rest of the
-// squares
-int floodFillAccEntrances(std::vector<bool> &board, int x, int y, int &acc,
-        std::map<std::pair<int, int>, int> &corridorEntrances)
-{
-    board[x*height + y] = true;
-
-    {
-        std::map<std::pair<int, int>, int>::iterator it =
-            corridorEntrances.find(std::make_pair(x, y));
-        if (it != corridorEntrances.end()) {
-            if (it->second > acc)
-                acc = it->second;
-            corridorEntrances.erase(it);
-        }
-    }
-
-    int cnt = 1;
-
-    if (!board[(x - 1)*height + y])
-        cnt += floodFillAccEntrances(board, x - 1, y, acc, corridorEntrances);
-
-    if (!board[(x + 1)*height + y])
-        cnt += floodFillAccEntrances(board, x + 1, y, acc, corridorEntrances);
-
-    if (!board[x*height + (y - 1)])
-        cnt += floodFillAccEntrances(board, x, y - 1, acc, corridorEntrances);
-
-    if (!board[x*height + (y + 1)])
-        cnt += floodFillAccEntrances(board, x, y + 1, acc, corridorEntrances);
-
-    return cnt;
-}
-
 static void pruneOneCorridor(std::vector<bool> &board, int x, int y,
         int px, int py,
         std::map<std::pair<int, int>, int> &corridorEntrances)
@@ -172,30 +140,45 @@ static void pruneOneCorridor(std::vector<bool> &board, int x, int y,
         return;
     }
 
-    int pside;
+    int pside, cside;
     if (squaresReachEachOther(board, xn[0], yn[0], px, py)) {
         pside = 0;
-        n = 1;
+        cside = 1;
     } else {
         pside = 1;
-        n = 0;
+        cside = 0;
     }
 
-    int cnt = 0;
+    int cnt = 1;
+
+    // step out of the corridor on the closed side
+    while (cntMovesFromSquare(board, xn[cside], yn[cside]) == 1) {
+        board[xn[cside]*height + yn[cside]] = true;
+        if (!board[(xn[cside] + 1)*height + yn[cside]])
+            xn[cside] = xn[cside] + 1;
+        else if (!board[(xn[cside] - 1)*height + yn[cside]])
+            xn[cside] = xn[cside] - 1;
+        else if (!board[xn[cside]*height + yn[cside] + 1])
+            yn[cside] = yn[cside] + 1;
+        else if (!board[xn[cside]*height + yn[cside] - 1])
+            yn[cside] = yn[cside] - 1;
+
+        ++cnt;
+    }
+
+    //fprintf(stderr, "corridor x: %d, y: %d, cnt: %d\n", x, y, cnt);
+
+    cnt += countReachable(board, xn[cside], yn[cside]);
 
     {
         std::map<std::pair<int, int>, int>::iterator it =
             corridorEntrances.find(std::make_pair(x, y));
         if (it != corridorEntrances.end()) {
-            cnt = it->second;
+            if (it->second > cnt)
+                cnt = it->second;
             corridorEntrances.erase(it);
         }
     }
-
-    int cnt2 = 1;
-    
-    cnt2 += floodFillAccEntrances(board, xn[n], yn[n], cnt, corridorEntrances);
-    cnt += cnt2;
 
     std::map<std::pair<int, int>, int>::iterator it =
         corridorEntrances.find(std::make_pair(xn[pside], yn[pside]));
@@ -276,21 +259,15 @@ static int pruneCorridors(std::vector<bool> &board, int px, int py)
     // incorrectly
     for (int i = 1; i < width - 1; ++i) {
         for (int j = 1; j < height - 1; ++j) {
-            int moves = cntMovesFromSquare(board, i, j);
-            if (moves == 1)
-                pruneOneDeadEnd(board, i, j, px, py, corridorEntrances);
-        }
-    }
-
-    for (int i = 1; i < width - 1; ++i) {
-        for (int j = 1; j < height - 1; ++j) {
             visitSquareForPruning(board, i, j, px, py, corridorEntrances);
         }
     }
 
+    //fprintf(stderr, "------------\n");
     int cnt = 0;
     for (std::map<std::pair<int, int>, int>::const_iterator it =
             corridorEntrances.begin(); it != corridorEntrances.end(); ++it) {
+        //fprintf(stderr, "entrance x: %d, y: %d, cnt: %d\n", it->first.first, it->first.second, it->second);
         if (it->second > cnt)
             cnt = it->second;
     }
@@ -308,7 +285,11 @@ static int countReachable(const std::vector<bool> &boardIn, int px, int py)
 
     int corridorDepth = pruneCorridors(board, px, py);
 
-    return floodFill(board, px, py) + corridorDepth;
+    int fill = floodFill(board, px, py) + corridorDepth;
+
+    //fprintf(stderr, "reachable px: %d, py: %d, fill: %d\n", px, py, fill);
+
+    return fill;
 }
 
 int countReachableSquares(const Map &map, Player player)
