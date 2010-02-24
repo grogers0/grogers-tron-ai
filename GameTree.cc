@@ -10,8 +10,6 @@
 #include <cmath>
 #include <cassert>
 
-//#define DUMP_STATE
-
 static const int INF = INT_MAX;
 
 typedef int (*HeuristicFunction)(const Map &map);
@@ -130,11 +128,6 @@ void GameTree::buildTreeOneLevel(Node *node, Map &map, Player player)
 }
 
 
-#ifdef DUMP_STATE
-static std::deque<std::pair<Player, Direction> > choices;
-FILE *fp = fopen("dump.txt", "w");
-#endif
-
 int GameTree::negamax(Node *node, Map &map, int depth,
         int alpha, int beta,
         int sign, HeuristicFunction fun, Direction *bestDir)
@@ -150,16 +143,8 @@ int GameTree::negamax(Node *node, Map &map, int depth,
         return sign * fun(map);
     }
 
-#ifdef DUMP_STATE
-    if (choices.empty())
-        map.print(fp);
-#endif
-
     for (int i = 0; i < 4 && node->children[i]; ++i) {
         Direction dir = node->children[i]->direction;
-#ifdef DUMP_STATE
-        choices.push_back(std::make_pair(signToPlayer(sign), node->children[i]->direction));
-#endif
 
         map.move(dir, signToPlayer(sign));
         int a = -negamax(node->children[i], map, depth - 1,
@@ -167,26 +152,12 @@ int GameTree::negamax(Node *node, Map &map, int depth,
         map.unmove(dir, signToPlayer(sign));
 
         if (a > alpha) {
-#ifdef DUMP_STATE
-            if (a < beta) { // dont print beta cutoffs
-                for (std::deque<std::pair<Player, Direction> >::const_iterator it = choices.begin();
-                        it != choices.end(); ++it) {
-                    fprintf(fp, "%s %s, ", playerToString(it->first), dirToString(it->second));
-                }
-                fprintf(fp, "improves new alpha: %d, curr alpha: %d, curr beta: %d\n", a, alpha, beta);
-            }
-#endif
-
             if (bestDir)
                 *bestDir = dir;
 
             node->promoteChild(i);
             alpha = a;
         }
-
-#ifdef DUMP_STATE
-        choices.pop_back();
-#endif
 
         if (alpha >= beta)
             break;
@@ -426,10 +397,6 @@ Direction decideMoveMinimax(Map map)
         }
     } catch (...) {
     }
-
-#ifdef DUMP_STATE
-    choices.clear();
-#endif
 
     return dir;
 }
