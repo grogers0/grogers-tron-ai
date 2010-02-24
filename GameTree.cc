@@ -32,6 +32,7 @@ class GameTree
                 int alpha, int beta,
                 int sign, HeuristicFunction fun);
         bool quiet(Node *node, Map &map, int sign, HeuristicFunction fun);
+        bool quiet_quiescence(Node *node, Map &map, int sign, HeuristicFunction fun);
 
         struct Node
         {
@@ -149,6 +150,14 @@ bool GameTree::quiet(Node *node, Map &map, int sign, HeuristicFunction fun)
     return false;
 }
 
+bool GameTree::quiet_quiescence(Node *node, Map &map, int sign, HeuristicFunction fun)
+{
+    if (isOpponentIsolated(map))
+        return true;
+
+    return false;
+}
+
 int GameTree::negamax_quiescence(Node *node, Map &map, int depth,
         int alpha, int beta, int sign, HeuristicFunction fun)
 {
@@ -160,8 +169,7 @@ int GameTree::negamax_quiescence(Node *node, Map &map, int depth,
             return sign * fun(map);
     }
 
-    if (depth == 0 ||
-            (isOpponentIsolated(map) && signToPlayer(sign) == SELF)) { // quiet enough
+    if (depth == 0 || quiet_quiescence(node, map, sign, fun)) {
         return sign * fun(map);
     }
 
@@ -207,7 +215,7 @@ int GameTree::negamax_normal(Node *node, Map &map, int depth,
         if (quiet(node, map, sign, fun))
             return sign * fun(map);
         else
-            return negamax_quiescence(node, map, 4, alpha, beta, sign, fun);
+            return negamax_quiescence(node, map, 6, alpha, beta, sign, fun);
     }
 
     // singularity enhancement - if only one possible move, don't let it count
@@ -449,11 +457,6 @@ static int fitness(const Map &map)
         return cntPlayer - cntEnemy;
     } else {
         int voronoi = voronoiTerritory(map);
-        /*if (voronoi == 0){
-            int dist = distanceToOpponent(map);
-            int corridors = countCorridorSquares(map);
-            return -dist - corridors;
-        }*/
         return voronoi;
     }
 }
