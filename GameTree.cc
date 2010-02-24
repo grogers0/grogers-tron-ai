@@ -24,10 +24,14 @@ class GameTree
 
     private:
         struct Node;
-        void buildTreeOneLevel(Node *node, Map &map, Player player);
-        int negamax(Node *node, Map &map, int depth,
+        bool buildTreeOneLevel(Node *node, Map &map, Player player);
+        int negamax_normal(Node *node, Map &map, int depth,
                 int alpha, int beta,
                 int sign, HeuristicFunction fun, Direction *dir);
+        int negamax_quiescence(Node *node, Map &map, int depth,
+                int alpha, int beta,
+                int sign, HeuristicFunction fun);
+        bool quiet(Node *node, Map &map, int sign, HeuristicFunction fun);
 
         struct Node
         {
@@ -93,7 +97,7 @@ Direction GameTree::decideMove(Map &map, int depth, HeuristicFunction fun)
 {
     Direction bestDir = NORTH;
 
-    int alpha = negamax(root, map, depth, -INF, INF, 1, fun, &bestDir);
+    int alpha = negamax_normal(root, map, depth, -INF, INF, 1, fun, &bestDir);
 
     fprintf(stderr, "depth: %d, dir: %s, alpha: %d\n", depth, dirToString(bestDir), alpha);
 
@@ -105,10 +109,11 @@ Direction GameTree::decideMove(Map &map, int depth, HeuristicFunction fun)
     return bestDir;
 }
 
-void GameTree::buildTreeOneLevel(Node *node, Map &map, Player player)
+// returns true if node is NOT a terminal node (ie the tree was built)
+bool GameTree::buildTreeOneLevel(Node *node, Map &map, Player player)
 {
     if (map.myX() == map.enemyX() && map.myY() == map.enemyY())
-        return;
+        return false;
 
     if (Time::now() > deadline)
         throw std::runtime_error("time expired for move decision");
@@ -125,21 +130,37 @@ void GameTree::buildTreeOneLevel(Node *node, Map &map, Player player)
 
         ++cnt;
     }
+
+    return cnt > 0;
 }
 
+bool GameTree::quiet(Node *node, Map &map, int sign, HeuristicFunction fun)
+{
+    // if we are isolated, the evaluation is likely to be stable (as long as we count the reachable moves correctly)
+    if (isOpponentIsolated(map))
+        return true;
 
-int GameTree::negamax(Node *node, Map &map, int depth,
-        int alpha, int beta,
-        int sign, HeuristicFunction fun, Direction *bestDir)
+    int a1 = sign * fun(map);
+    int a2 = negamax_quiescence(node, map, 1, -INF, INF, sign, fun);
+
+    if (abs(a1 - a2) <= 4)
+        return true;
+
+    return false;
+}
+
+int GameTree::negamax_quiescence(Node *node, Map &map, int depth,
+        int alpha, int beta, int sign, HeuristicFunction fun)
 {
     if (Time::now() > deadline)
         throw std::runtime_error("time expired for move decision");
 
-    if (depth > 0 && node->children[0] == NULL) {
-        buildTreeOneLevel(node, map, signToPlayer(sign));
+    if (node->children[0] == NULL) {
+        if (!buildTreeOneLevel(node, map, signToPlayer(sign)))
+            return sign * fun(map);
     }
 
-    if (depth == 0 || node->children[0] == NULL) {
+    if (depth == 0) {
         return sign * fun(map);
     }
 
@@ -147,7 +168,46 @@ int GameTree::negamax(Node *node, Map &map, int depth,
         Direction dir = node->children[i]->direction;
 
         map.move(dir, signToPlayer(sign));
-        int a = -negamax(node->children[i], map, depth - 1,
+        int a = -negamax_quiescence(node->children[i], map, depth - 1,
+                -beta, -alpha, -sign, fun);
+        map.unmove(dir, signToPlayer(sign));
+
+        if (a > alpha) {
+            node->promoteChild(i);
+            alpha = a;
+        }
+
+        if (alpha >= beta)
+            break;
+    }
+
+    return alpha;
+}
+
+int GameTree::negamax_normal(Node *node, Map &map, int depth,
+        int alpha, int beta,
+        int sign, HeuristicFunction fun, Direction *bestDir)
+{
+    if (Time::now() > deadline)
+        throw std::runtime_error("time expired for move decision");
+
+    if (node->children[0] == NULL) {
+        if (!buildTreeOneLevel(node, map, signToPlayer(sign)))
+            return sign * fun(map);
+    }
+
+    if (depth == 0) {
+        if (quiet(node, map, sign, fun))
+            return sign * fun(map);
+        else
+            return negamax_quiescence(node, map, 4, alpha, beta, sign, fun);
+    }
+
+    for (int i = 0; i < 4 && node->children[i]; ++i) {
+        Direction dir = node->children[i]->direction;
+
+        map.move(dir, signToPlayer(sign));
+        int a = -negamax_normal(node->children[i], map, depth - 1,
                 -beta, -alpha, -sign, fun, NULL);
         map.unmove(dir, signToPlayer(sign));
 
