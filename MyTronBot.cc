@@ -20,7 +20,7 @@ Direction whichMove(const Map& map)
         Time tincr(2, 800);
         deadline = Time::now() + tincr;
     } else {
-        Time tincr(0, 990);
+        Time tincr(0, 950);
         deadline = Time::now() + tincr;
     }
 
