@@ -467,7 +467,7 @@ Direction decideMoveMinimax(Map map)
 
     Direction dir = NORTH;
     try {
-        for (int depth = 1; depth < 100; depth += 1) {
+        for (int depth = 2; depth < 100; depth += 2) {
             dir = tree.decideMove(map, depth, &fitness);
             fprintf(stderr, "Depth %d ==> %s\n", depth, dirToString(dir));
         }
