@@ -10,5 +10,6 @@ int countReachableSquares(const Map &map, Player player);
 Direction decideMoveMinimax(Map);
 bool squaresReachEachOther(const std::vector<bool> &board, int x1, int y1,
         int x2, int y2);
+void fillUnreachableSquares(std::vector<bool> &board, int x, int y);
 
 #endif

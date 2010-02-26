@@ -76,7 +76,7 @@ static int floodFillCorr(std::vector<bool> &board, int x, int y, int &extra,
     return ret;
 }
 
-static void fillUnreachableSquares(std::vector<bool> &board, int x, int y)
+void fillUnreachableSquares(std::vector<bool> &board, int x, int y)
 {
     std::vector<bool> boardReachFilled(board);
 
