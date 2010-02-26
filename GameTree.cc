@@ -169,7 +169,7 @@ int GameTree::negamax_quiescence(Node *node, Map &map, int depth,
             return sign * fun(map);
     }
 
-    if (depth == 0 || quiet_quiescence(node, map, sign, fun)) {
+    if (depth == 0 || (depth%2 == 0 && quiet_quiescence(node, map, sign, fun))) {
         return sign * fun(map);
     }
 
