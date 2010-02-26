@@ -1,5 +1,6 @@
 #include "MoveDeciders.h"
 #include <cstdio>
+#include <cstdlib>
 #include <cassert>
 #include <map>
 #include <utility>
@@ -43,35 +44,48 @@ static int floodFill(std::vector<bool> &board, int x, int y)
     return ret;
 }
 
+static inline int checkerSign(int x, int y)
+{
+    if ((x%2 == 0) != (y%2 == 0))
+        return 1;
+    else
+        return -1;
+}
+
 static int floodFillCorr(std::vector<bool> &board, int x, int y, int &extra,
+        int &checkerDiff, int &signCorr,
         std::map<std::pair<int, int>, int> &corridorEntrances)
 {
     int ret = 1;
 
     board[x*height + y] = true;
 
+    checkerDiff += checkerSign(x, y);
+
     {
         std::map<std::pair<int, int>, int>::iterator it =
             corridorEntrances.find(std::make_pair(x, y));
         if (it != corridorEntrances.end()) {
             //fprintf(stderr, "entrance x: %d, y: %d, cnt: %d\n", x, y, it->second);
-            if (it->second > extra)
+            if (it->second > extra) {
                 extra = it->second;
+                signCorr = checkerSign(x, y);
+            }
             corridorEntrances.erase(it);
         }
     }
 
     if (!board[(x - 1)*height + y])
-        ret += floodFillCorr(board, x - 1, y, extra, corridorEntrances);
+        ret += floodFillCorr(board, x - 1, y, extra, checkerDiff, signCorr, corridorEntrances);
 
     if (!board[(x + 1)*height + y])
-        ret += floodFillCorr(board, x + 1, y, extra, corridorEntrances);
+        ret += floodFillCorr(board, x + 1, y, extra, checkerDiff, signCorr, corridorEntrances);
 
     if (!board[x*height + (y - 1)])
-        ret += floodFillCorr(board, x, y - 1, extra, corridorEntrances);
+        ret += floodFillCorr(board, x, y - 1, extra, checkerDiff, signCorr, corridorEntrances);
 
     if (!board[x*height + (y + 1)])
-        ret += floodFillCorr(board, x, y + 1, extra, corridorEntrances);
+        ret += floodFillCorr(board, x, y + 1, extra, checkerDiff, signCorr, corridorEntrances);
 
     return ret;
 }
@@ -306,12 +320,34 @@ static int countReachable(const std::vector<bool> &boardIn, int px, int py,
     pruneCorridors(board, px, py, corridorEntrances);
 
     int corridorDepth = 0;
+    int checkerDiff = 0;
+    int corridorSign = 0;
 
-    int fill = floodFillCorr(board, px, py, corridorDepth, corridorEntrances);
+    int fill = floodFillCorr(board, px, py, corridorDepth, checkerDiff,
+            corridorSign, corridorEntrances);
+
+    int checkerSub = 0;
+    int playerSign = checkerSign(px, py);
+    if (corridorSign == 0) { // no corridors
+        if (checkerDiff == 0)
+            checkerSub = 0;
+        else if (playerSign * checkerDiff > 0)
+            checkerSub = abs(checkerDiff);
+        else
+            checkerSub = abs(checkerDiff) - 1;
+    } else {
+        if (playerSign * corridorSign < 0)
+            checkerSub = abs(checkerDiff);
+        else if (playerSign * checkerDiff > 0)
+            checkerSub = abs(checkerDiff) - 1;
+        else
+            checkerSub = abs(checkerDiff) + 1;
+    }
 
     //fprintf(stderr, "reachable px: %d, py: %d, fill: %d\n", px, py, fill + corridorDepth);
 
-    return fill + corridorDepth;
+    //fprintf(stderr, "checker diff: %d, psign: %d, corrsign: %d, sub: %d\n", checkerDiff, playerSign, corridorSign, checkerSub);
+    return fill + corridorDepth - checkerSub;
 }
 
 int countReachableSquares(const Map &map, Player player)
