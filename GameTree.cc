@@ -141,11 +141,11 @@ bool GameTree::quiet(Node *node, Map &map, int sign, HeuristicFunction fun)
     if (isOpponentIsolated(map))
         return true;
 
-    int a1 = sign * fun(map);
-    int a2 = negamax_quiescence(node, map, 1, -INF, INF, sign, fun);
-
-    if (abs(a1 - a2) <= 4)
-        return true;
+    //int a1 = sign * fun(map);
+    //int a2 = negamax_quiescence(node, map, 1, -INF, INF, sign, fun);
+//
+    //if (abs(a1 - a2) <= 4)
+        //return true;
 
     return false;
 }
@@ -425,11 +425,11 @@ static int fitness(const Map &map)
     if (isOpponentIsolated(map)) {
         int cntPlayer = countReachableSquares(map, SELF);
         int cntEnemy = countReachableSquares(map, ENEMY);
-        return cntPlayer - cntEnemy;
+        return (cntPlayer - cntEnemy)*2;
     } else {
         int voronoi = voronoiTerritory(map);
         int corridors = countCorridorSquares(map);
-        return voronoi - corridors;
+        return voronoi*2 - corridors;
     }
 }
 
