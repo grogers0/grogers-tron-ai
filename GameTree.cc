@@ -100,10 +100,10 @@ Direction GameTree::decideMove(Map &map, int depth, HeuristicFunction fun)
 
     int alpha = negamax_normal(root, map, depth, -INF, INF, 1, fun, &bestDir);
 
-    fprintf(stderr, "depth: %d, dir: %s, alpha: %d\n", depth, dirToString(bestDir), alpha);
+    //fprintf(stderr, "depth: %d, dir: %s, alpha: %d\n", depth, dirToString(bestDir), alpha);
 
     if (alpha == -INF) {
-        fprintf(stderr, "best alpha is -Infinity, we lose no matter what...\n");
+        //fprintf(stderr, "best alpha is -Infinity, we lose no matter what...\n");
         throw std::runtime_error("no possible moves, or all moves result in a loss");
     }
 
@@ -473,7 +473,7 @@ Direction decideMoveMinimax(Map map)
     try {
         for (int depth = 2; depth < 100; depth += 2) {
             dir = tree.decideMove(map, depth, &fitness);
-            fprintf(stderr, "Depth %d ==> %s\n", depth, dirToString(dir));
+            //fprintf(stderr, "Depth %d ==> %s\n", depth, dirToString(dir));
         }
     } catch (...) {
     }

@@ -100,7 +100,7 @@ Direction decideMoveIsolatedFromOpponent(Map map)
         int depth = 0;
         do {
             dir = tmpDir;
-            fprintf(stderr, "isolated path depth %d ==> %s, found depth: %d, count: %d\n", depth, dirToString(dir), depthCount.first, depthCount.second);
+            //fprintf(stderr, "isolated path depth %d ==> %s, found depth: %d, count: %d\n", depth, dirToString(dir), depthCount.first, depthCount.second);
 
             ++depth;
             depthCount = isolatedPathFind(map, 0, depth, &tmpDir);
