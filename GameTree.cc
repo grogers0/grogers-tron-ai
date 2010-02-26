@@ -387,24 +387,6 @@ static int distanceToOpponent(const Map &map)
     return -1;
 }
 
-// note must be tested to have 1 xmove and 1 ymove before entry
-static bool isCornerCorridor(const std::vector<bool> &board, int x, int y)
-{
-    int x2, y2;
-
-    if (!board[(x - 1)*height + y])
-        x2 = x - 1;
-    else
-        x2 = x + 1;
-
-    if (!board[x*height + y - 1])
-        y2 = y - 1;
-    else 
-        y2 = y + 1;
-
-    return board[x2*height + y2];
-}
-
 static int countCorridorSquares(const Map &map)
 {
     std::vector<bool> board(map.getBoard());
@@ -417,22 +399,8 @@ static int countCorridorSquares(const Map &map)
             if (board[i*height + j])
                 continue;
 
-            int xmoves = 0, ymoves = 0;
-            if (!board[(i - 1)*height + j])
-                ++xmoves;
-            if (!board[(i + 1)*height + j])
-                ++xmoves;
-            if (!board[i*height + (j - 1)])
-                ++ymoves;
-            if (!board[i*height + (j + 1)])
-                ++ymoves;
-
-            if (xmoves + ymoves <= 1 ||
-                    (ymoves == 2 && xmoves == 0) ||
-                    (ymoves == 0 && xmoves == 2) ||
-                    (xmoves == 1 && ymoves == 1 && isCornerCorridor(board, i, j))) {
+            if (isCorridorSquare(board, i, j))
                 ++cnt;
-            }
         }
     }
     return cnt;

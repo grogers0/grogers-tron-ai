@@ -8,21 +8,6 @@
 static int countReachable(const std::vector<bool> &boardIn, int px, int py,
         std::map<std::pair<int, int>, int> &);
 
-static inline int cntMovesFromSquare(const std::vector<bool> &board,
-        int x, int y)
-{
-    int cnt = 0;
-    if (!board[(x - 1)*height + y])
-        ++cnt;
-    if (!board[(x + 1)*height + y])
-        ++cnt;
-    if (!board[x*height + (y - 1)])
-        ++cnt;
-    if (!board[x*height + (y + 1)])
-        ++cnt;
-    return cnt;
-}
-
 static int floodFill(std::vector<bool> &board, int x, int y)
 {
     int ret = 1;
@@ -106,29 +91,19 @@ static void visitSquareForPruning(std::vector<bool> &board, int x, int y,
         int px, int py,
         std::map<std::pair<int, int>, int> &corridorEntrances);
 
+// note it must be checked before entry if this square is not a wall or a dead end
 bool isCorridorSquare(const std::vector<bool> &board, int x, int y)
 {
-    int x2, y2, xmoves = 0, ymoves = 0;
-    if (!board[(x + 1)*height + y]) {
-        x2 = x + 1;
-        ++xmoves;
-    }
-    if (!board[(x - 1)*height + y]) {
-        x2 = x - 1;
-        ++xmoves;
-    }
-    if (!board[x*height + y + 1]) {
-        y2 = y + 1;
-        ++ymoves;
-    }
-    if (!board[x*height + y - 1]) {
-        y2 = y - 1;
-        ++ymoves;
-    }
+    if (board[(x - 1)*height + y] && board[(x + 1)*height + y])
+        return true;
+    if (board[x*height + (y - 1)] && board[x*height + (y + 1)])
+        return true;
+    if (board[(x - 1)*height + (y + 1)] && board[(x + 1)*height + (y - 1)])
+        return true;
+    if (board[(x + 1)*height + (y - 1)] && board[(x - 1)*height + (y + 1)])
+        return true;
 
-    return (xmoves == 0 && ymoves == 2) ||
-        (xmoves == 2 && ymoves == 0) ||
-        (xmoves == 1 && ymoves == 1 && board[x2*height + y2]);
+    return false;
 }
 
 static std::vector<bool> notCorridors;

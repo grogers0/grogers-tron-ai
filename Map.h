@@ -216,6 +216,20 @@ inline const std::vector<bool> &Map::getBoard() const
     return is_wall;
 }
 
+inline int cntMovesFromSquare(const std::vector<bool> &board, int x, int y)
+{
+    int cnt = 0;
+    if (!board[(x - 1)*height + y])
+        ++cnt;
+    if (!board[(x + 1)*height + y])
+        ++cnt;
+    if (!board[x*height + (y - 1)])
+        ++cnt;
+    if (!board[x*height + (y + 1)])
+        ++cnt;
+    return cnt;
+}
+
 // Get my X and Y position. These are zero-based.
 inline int Map::myX() const { return player_one_x; }
 inline int Map::myY() const { return player_one_y; }
