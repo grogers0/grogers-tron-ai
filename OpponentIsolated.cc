@@ -9,47 +9,46 @@
 
 
 static bool floodFillReachesOtherSquare(std::vector<bool> &board,
-        int x1, int y1, int x2, int y2)
+        position pos1, position pos2)
 {
-    if (x1 == x2 && y1 == y2)
+    if (pos1 == pos2)
         return true;
 
-    board[x1*height + y1] = true;
+    board[index(pos1)] = true;
 
-    if (!board[(x1 - 1)*height + y1] &&
-            floodFillReachesOtherSquare(board, x1 - 1, y1, x2, y2))
+    if (!board[index(pos1.north())] &&
+            floodFillReachesOtherSquare(board, pos1.north(), pos2))
         return true;
 
-    if (!board[(x1 + 1)*height + y1] &&
-            floodFillReachesOtherSquare(board, x1 + 1, y1, x2, y2))
+    if (!board[index(pos1.south())] &&
+            floodFillReachesOtherSquare(board, pos1.south(), pos2))
         return true;
 
-    if (!board[x1*height + (y1 - 1)] &&
-            floodFillReachesOtherSquare(board, x1, y1 - 1, x2, y2))
+    if (!board[index(pos1.west())] &&
+            floodFillReachesOtherSquare(board, pos1.west(), pos2))
         return true;
 
-    if (!board[x1*height + (y1 + 1)] &&
-            floodFillReachesOtherSquare(board, x1, y1 + 1, x2, y2))
+    if (!board[index(pos1.east())] &&
+            floodFillReachesOtherSquare(board, pos1.east(), pos2))
         return true;
 
     return false;
 }
 
-bool squaresReachEachOther(const std::vector<bool> &boardOrig, int x1, int y1,
-        int x2, int y2)
+bool squaresReachEachOther(const std::vector<bool> &boardOrig,
+        position pos1, position pos2)
 {
     std::vector<bool> board(boardOrig);
 
-    board[x1*height + y1] = false;
-    board[x2*height + y2] = false;
+    board[index(pos1)] = false;
+    board[index(pos2)] = false;
 
-    return floodFillReachesOtherSquare(board, x1, y1, x2, y2);
+    return floodFillReachesOtherSquare(board, pos1, pos2);
 }
 
 bool isOpponentIsolated(const Map &map)
 {
-    return !squaresReachEachOther(map.getBoard(), map.myX(), map.myY(),
-            map.enemyX(), map.enemyY());
+    return !squaresReachEachOther(map.getBoard(), map.my_pos(), map.enemy_pos());
 }
 
 static std::pair<int, int> isolatedPathFind(Map &map, int truedepth, int depth, Direction *outDir)

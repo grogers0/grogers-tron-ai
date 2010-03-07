@@ -5,81 +5,80 @@
 #include <map>
 #include <utility>
 
-static int countReachable(const std::vector<bool> &boardIn, int px, int py,
-        std::map<std::pair<int, int>, int> &);
+static int countReachable(const std::vector<bool> &boardIn,
+         position pos, std::map<position, int> &);
 
-static int floodFill(std::vector<bool> &board, int x, int y)
+static int floodFill(std::vector<bool> &board, position pos)
 {
     int ret = 1;
 
-    board[x*height + y] = true;
+    board[index(pos)] = true;
 
-    if (!board[(x - 1)*height + y])
-        ret += floodFill(board, x - 1, y);
+    if (!board[index(pos.north())])
+        ret += floodFill(board, pos.north());
 
-    if (!board[(x + 1)*height + y])
-        ret += floodFill(board, x + 1, y);
+    if (!board[index(pos.south())])
+        ret += floodFill(board, pos.south());
 
-    if (!board[x*height + (y - 1)])
-        ret += floodFill(board, x, y - 1);
+    if (!board[index(pos.west())])
+        ret += floodFill(board, pos.west());
 
-    if (!board[x*height + (y + 1)])
-        ret += floodFill(board, x, y + 1);
+    if (!board[index(pos.east())])
+        ret += floodFill(board, pos.east());
 
     return ret;
 }
 
-static inline int checkerSign(int x, int y)
+static inline int checkerSign(position pos)
 {
-    if ((x%2 == 0) != (y%2 == 0))
+    if ((pos.x%2 == 0) != (pos.y%2 == 0))
         return 1;
     else
         return -1;
 }
 
-static int floodFillCorr(std::vector<bool> &board, int x, int y, int &extra,
+static int floodFillCorr(std::vector<bool> &board, position pos, int &extra,
         int &checkerDiff, int &signCorr,
-        std::map<std::pair<int, int>, int> &corridorEntrances)
+        std::map<position, int> &corridorEntrances)
 {
     int ret = 1;
 
-    board[x*height + y] = true;
+    board[index(pos)] = true;
 
-    checkerDiff += checkerSign(x, y);
+    checkerDiff += checkerSign(pos);
 
     {
-        std::map<std::pair<int, int>, int>::iterator it =
-            corridorEntrances.find(std::make_pair(x, y));
+        std::map<position, int>::iterator it = corridorEntrances.find(pos);
         if (it != corridorEntrances.end()) {
             //fprintf(stderr, "entrance x: %d, y: %d, cnt: %d\n", x, y, it->second);
             if (it->second > extra) {
                 extra = it->second;
-                signCorr = checkerSign(x, y);
+                signCorr = checkerSign(pos);
             }
             corridorEntrances.erase(it);
         }
     }
 
-    if (!board[(x - 1)*height + y])
-        ret += floodFillCorr(board, x - 1, y, extra, checkerDiff, signCorr, corridorEntrances);
+    if (!board[index(pos.north())])
+        ret += floodFillCorr(board, pos.north(), extra, checkerDiff, signCorr, corridorEntrances);
 
-    if (!board[(x + 1)*height + y])
-        ret += floodFillCorr(board, x + 1, y, extra, checkerDiff, signCorr, corridorEntrances);
+    if (!board[index(pos.south())])
+        ret += floodFillCorr(board, pos.south(), extra, checkerDiff, signCorr, corridorEntrances);
 
-    if (!board[x*height + (y - 1)])
-        ret += floodFillCorr(board, x, y - 1, extra, checkerDiff, signCorr, corridorEntrances);
+    if (!board[index(pos.west())])
+        ret += floodFillCorr(board, pos.west(), extra, checkerDiff, signCorr, corridorEntrances);
 
-    if (!board[x*height + (y + 1)])
-        ret += floodFillCorr(board, x, y + 1, extra, checkerDiff, signCorr, corridorEntrances);
+    if (!board[index(pos.east())])
+        ret += floodFillCorr(board, pos.east(), extra, checkerDiff, signCorr, corridorEntrances);
 
     return ret;
 }
 
-void fillUnreachableSquares(std::vector<bool> &board, int x, int y)
+void fillUnreachableSquares(std::vector<bool> &board, position pos)
 {
     std::vector<bool> boardReachFilled(board);
 
-    floodFill(boardReachFilled, x, y);
+    floodFill(boardReachFilled, pos);
 
     for (int i = 0; i < width*height; ++i) {
         if (!board[i] && !boardReachFilled[i])
@@ -87,84 +86,86 @@ void fillUnreachableSquares(std::vector<bool> &board, int x, int y)
     }
 }
 
-static void visitSquareForPruning(std::vector<bool> &board, int x, int y,
-        int px, int py,
-        std::map<std::pair<int, int>, int> &corridorEntrances);
+static void visitSquareForPruning(std::vector<bool> &board, position pos,
+        position player_pos, std::map<position, int> &corridorEntrances);
 
 // note it must be checked before entry if this square is not a wall or a dead end
-bool isCorridorSquare(const std::vector<bool> &board, int x, int y)
+bool isCorridorSquare(const std::vector<bool> &board, position pos)
 {
-    if (board[(x - 1)*height + y] && board[(x + 1)*height + y])
+    if (board[index(pos.north())] && board[index(pos.south())])
         return true;
-    if (board[x*height + (y - 1)] && board[x*height + (y + 1)])
+    if (board[index(pos.west())] && board[index(pos.east())])
         return true;
-    if (board[(x - 1)*height + (y + 1)] && board[(x + 1)*height + (y - 1)])
+    if (board[index(pos.north().east())] && board[index(pos.south().west())])
         return true;
-    if (board[(x + 1)*height + (y - 1)] && board[(x - 1)*height + (y + 1)])
-        return true;
+    // hmmm, this was a bug in the old version but fixing the bug seems
+    // to make it dummer, so oh well...
+    //if (board[index(pos.north().west())] && board[index(pos.south().east())])
+        //return true;
 
     return false;
 }
 
 static std::vector<bool> notCorridors;
 
-static void markHallwayNotCorridor(std::vector<bool> &board, int x, int y)
+static void markHallwayNotCorridor(std::vector<bool> &board, position pos)
 {
-    if (cntMovesFromSquare(board, x, y) != 1)
+    if (cntMovesFromSquare(board, pos) != 1)
         return;
 
-    notCorridors[x*height + y] = true;
+    notCorridors[index(pos)] = true;
 
-    int x2 = x, y2 = y;
-    if (!board[(x + 1)*height + y])
-        x2 = x + 1;
-    else if (!board[(x - 1)*height + y])
-        x2 = x - 1;
-    else if (!board[x*height + y + 1])
-        y2 = y + 1;
-    else if (!board[x*height + y - 1])
-        y2 = y - 1;
+    position pos2;
+    if (!board[index(pos.north())])
+        pos2 = pos.north();
+    else if (!board[index(pos.south())])
+        pos2 = pos.south();
+    else if (!board[index(pos.west())])
+        pos2 = pos.west();
+    else if (!board[index(pos.east())])
+        pos2 = pos.east();
 
-    board[x*height + y] = true;
-    markHallwayNotCorridor(board, x2, y2);
-    board[x*height + y] = false;
+    board[index(pos)] = true;
+    markHallwayNotCorridor(board, pos2);
+    board[index(pos)] = false;
 }
 
-static void pruneOneCorridor(std::vector<bool> &board, int x, int y,
-        int px, int py,
-        std::map<std::pair<int, int>, int> &corridorEntrances)
+static void pruneOneCorridor(std::vector<bool> &board, position pos,
+        position player_pos, std::map<position, int> &corridorEntrances)
 {
-    if (notCorridors[x*height + y])
+    if (notCorridors[index(pos)])
         return;
 
-    if (!isCorridorSquare(board, x, y)) {
+    if (!isCorridorSquare(board, pos)) {
         return;
     }
 
-    int xn[2] = {x, x}, yn[2] = {y, y}, n = 0;
-    if (!board[(x + 1)*height + y])
-        xn[n++] = x + 1;
-    if (!board[(x - 1)*height + y])
-        xn[n++] = x - 1;
-    if (!board[x*height + y + 1])
-        yn[n++] = y + 1;
-    if (!board[x*height + y - 1])
-        yn[n++] = y - 1;
+    position posn[2] = {pos, pos};
+    int n = 0;
+    if (!board[index(pos.north())])
+        posn[n++] = pos.north();
+    if (!board[index(pos.south())])
+        posn[n++] = pos.south();
+    if (!board[index(pos.west())])
+        posn[n++] = pos.west();
+    if (!board[index(pos.east())])
+        posn[n++] = pos.east();
+    assert(n == 2);
 
-    board[x*height + y] = true;
+    board[index(pos)] = true;
 
-    if (squaresReachEachOther(board, xn[0], yn[0], xn[1], yn[1])) {
-        notCorridors[x*height + y] = true;
+    if (squaresReachEachOther(board, posn[0], posn[1])) {
+        notCorridors[index(pos)] = true;
 
-        markHallwayNotCorridor(board, xn[0], yn[0]);
-        markHallwayNotCorridor(board, xn[1], yn[1]);
+        markHallwayNotCorridor(board, posn[0]);
+        markHallwayNotCorridor(board, posn[1]);
 
-        board[x*height + y] = false;
+        board[index(pos)] = false;
         return;
     }
 
     int pside, cside;
-    if (squaresReachEachOther(board, xn[0], yn[0], px, py)) {
+    if (squaresReachEachOther(board, posn[0], player_pos)) {
         pside = 0;
         cside = 1;
     } else {
@@ -175,27 +176,27 @@ static void pruneOneCorridor(std::vector<bool> &board, int x, int y,
     int cnt = 1;
 
     // step out of the corridor on the closed side
-    while (cntMovesFromSquare(board, xn[cside], yn[cside]) == 1) {
-        board[xn[cside]*height + yn[cside]] = true;
-        if (!board[(xn[cside] + 1)*height + yn[cside]])
-            xn[cside] = xn[cside] + 1;
-        else if (!board[(xn[cside] - 1)*height + yn[cside]])
-            xn[cside] = xn[cside] - 1;
-        else if (!board[xn[cside]*height + yn[cside] + 1])
-            yn[cside] = yn[cside] + 1;
-        else if (!board[xn[cside]*height + yn[cside] - 1])
-            yn[cside] = yn[cside] - 1;
+    while (cntMovesFromSquare(board, posn[cside]) == 1) {
+        board[index(posn[cside])] = true;
+
+        if (!board[index(posn[cside].north())])
+            posn[cside] = posn[cside].north();
+        else if (!board[index(posn[cside].south())])
+            posn[cside] = posn[cside].south();
+        else if (!board[index(posn[cside].west())])
+            posn[cside] = posn[cside].west();
+        else if (!board[index(posn[cside].east())])
+            posn[cside] = posn[cside].east();
 
         ++cnt;
     }
 
     //fprintf(stderr, "corridor x: %d, y: %d, cnt: %d\n", x, y, cnt);
 
-    cnt += countReachable(board, xn[cside], yn[cside], corridorEntrances);
+    cnt += countReachable(board, posn[cside], corridorEntrances);
 
     {
-        std::map<std::pair<int, int>, int>::iterator it =
-            corridorEntrances.find(std::make_pair(x, y));
+        std::map<position, int>::iterator it = corridorEntrances.find(pos);
         if (it != corridorEntrances.end()) {
             if (it->second > cnt)
                 cnt = it->second;
@@ -203,106 +204,102 @@ static void pruneOneCorridor(std::vector<bool> &board, int x, int y,
         }
     }
 
-    std::map<std::pair<int, int>, int>::iterator it =
-        corridorEntrances.find(std::make_pair(xn[pside], yn[pside]));
+    std::map<position, int>::iterator it = corridorEntrances.find(posn[pside]);
     if (it == corridorEntrances.end())
-        corridorEntrances.insert(std::make_pair(std::make_pair(xn[pside], yn[pside]), cnt));
+        corridorEntrances.insert(std::make_pair(posn[pside], cnt));
     else if (cnt > it->second)
         it->second = cnt;
 
-    visitSquareForPruning(board, xn[pside], yn[pside], px, py, corridorEntrances);
+    visitSquareForPruning(board, posn[pside], player_pos, corridorEntrances);
 }
 
-static void pruneOneDeadEnd(std::vector<bool> &board, int x, int y,
-        int px, int py,
-        std::map<std::pair<int, int>, int> &corridorEntrances)
+static void pruneOneDeadEnd(std::vector<bool> &board, position pos,
+        position player_pos, std::map<position, int> &corridorEntrances)
 {
     int cnt = 1;
 
     {
-        std::map<std::pair<int, int>, int>::iterator it =
-            corridorEntrances.find(std::make_pair(x, y));
+        std::map<position, int>::iterator it = corridorEntrances.find(pos);
         if (it != corridorEntrances.end()) {
             cnt = it->second + 1;
             corridorEntrances.erase(it);
         }
     }
 
-    int x2 = x, y2 = y;
-    if (!board[(x + 1)*height + y])
-        x2 = x + 1;
-    else if (!board[(x - 1)*height + y])
-        x2 = x - 1;
-    else if (!board[x*height + y + 1])
-        y2 = y + 1;
-    else if (!board[x*height + y - 1])
-        y2 = y - 1;
+    position pos2;
+    if (!board[index(pos.north())])
+        pos2 = pos.north();
+    else if (!board[index(pos.south())])
+        pos2 = pos.south();
+    else if (!board[index(pos.west())])
+        pos2 = pos.west();
+    else if (!board[index(pos.east())])
+        pos2 = pos.east();
     else
         assert(false);
 
-    board[x*height + y] = true;
+    board[index(pos)] = true;
 
-    std::map<std::pair<int, int>, int>::iterator it =
-        corridorEntrances.find(std::make_pair(x2, y2));
+    std::map<position, int>::iterator it = corridorEntrances.find(pos2);
     if (it == corridorEntrances.end())
-        corridorEntrances.insert(std::make_pair(std::make_pair(x2, y2), cnt));
+        corridorEntrances.insert(std::make_pair(pos2, cnt));
     else if (cnt > it->second)
         it->second = cnt;
 
-    visitSquareForPruning(board, x2, y2, px, py, corridorEntrances);
+    visitSquareForPruning(board, pos2, player_pos, corridorEntrances);
 }
 
-static void visitSquareForPruning(std::vector<bool> &board, int x, int y,
-        int px, int py,
-        std::map<std::pair<int, int>, int> &corridorEntrances)
+static void visitSquareForPruning(std::vector<bool> &board, position pos,
+        position player_pos, std::map<position, int> &corridorEntrances)
 {
-    if (board[x*height + y])
+    if (board[index(pos)])
         return;
 
     // player square can't be a corridor
-    if (x == px && y == py)
+    if (pos == player_pos)
         return;
 
-    int moves = cntMovesFromSquare(board, x, y);
+    int moves = cntMovesFromSquare(board, pos);
     if (moves == 1)
-        pruneOneDeadEnd(board, x, y, px, py, corridorEntrances);
+        pruneOneDeadEnd(board, pos, player_pos, corridorEntrances);
     else if (moves == 2)
-        pruneOneCorridor(board, x, y, px, py, corridorEntrances);
+        pruneOneCorridor(board, pos, player_pos, corridorEntrances);
 }
 
-static void pruneCorridors(std::vector<bool> &board, int px, int py,
-        std::map<std::pair<int, int>, int> &corridorEntrances)
+static void pruneCorridors(std::vector<bool> &board, position player_pos,
+        std::map<position, int> &corridorEntrances)
 {
     notCorridors.clear();
     notCorridors.resize(width*height);
 
-    for (int i = 1; i < width - 1; ++i) {
-        for (int j = 1; j < height - 1; ++j) {
-            visitSquareForPruning(board, i, j, px, py, corridorEntrances);
+    position pos;
+    for (pos.x = 1; pos.x < width - 1; ++pos.x) {
+        for (pos.y = 1; pos.y < height - 1; ++pos.y) {
+            visitSquareForPruning(board, pos, player_pos, corridorEntrances);
         }
     }
 }
 
-static int countReachable(const std::vector<bool> &boardIn, int px, int py,
-        std::map<std::pair<int, int>, int> &corridorEntrances)
+static int countReachable(const std::vector<bool> &boardIn, position player_pos,
+        std::map<position, int> &corridorEntrances)
 {
     std::vector<bool> board(boardIn);
 
-    board[px*height + py] = false;
+    board[index(player_pos)] = false;
 
-    fillUnreachableSquares(board, px, py);
+    fillUnreachableSquares(board, player_pos);
 
-    pruneCorridors(board, px, py, corridorEntrances);
+    pruneCorridors(board, player_pos, corridorEntrances);
 
     int corridorDepth = 0;
     int checkerDiff = 0;
     int corridorSign = 0;
 
-    int fill = floodFillCorr(board, px, py, corridorDepth, checkerDiff,
+    int fill = floodFillCorr(board, player_pos, corridorDepth, checkerDiff,
             corridorSign, corridorEntrances);
 
     int checkerSub = 0;
-    int playerSign = checkerSign(px, py);
+    int playerSign = checkerSign(player_pos);
     if (corridorSign == 0) { // no corridors
         if (checkerDiff == 0)
             checkerSub = 0;
@@ -327,19 +324,13 @@ static int countReachable(const std::vector<bool> &boardIn, int px, int py,
 
 int countReachableSquares(const Map &map, Player player)
 {
-    int x, y;
+    position pos;
     switch (player) {
-        case SELF:
-            x = map.myX();
-            y = map.myY();
-            break;
-        case ENEMY:
-            x = map.enemyX();
-            y = map.enemyY();
-            break;
+        case SELF: pos = map.my_pos(); break;
+        case ENEMY: pos = map.enemy_pos(); break;
     }
 
-    std::map<std::pair<int, int>, int> corridorEntrances;
+    std::map<position, int> corridorEntrances;
 
-    return countReachable(map.getBoard(), x, y, corridorEntrances) - 1;
+    return countReachable(map.getBoard(), pos, corridorEntrances) - 1;
 }

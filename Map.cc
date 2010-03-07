@@ -31,13 +31,15 @@ const char *playerToString(Player p)
 
 void Map::print(FILE *fp) const
 {
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            if (player_one_x == x && player_one_y == y)
+    position pos;
+    fprintf(stderr, "%d %d\n", width, height);
+    for (pos.y = 0; pos.y < height; ++pos.y) {
+        for (pos.x = 0; pos.x < width; ++pos.x) {
+            if (pos == player_pos[0])
                 fprintf(fp, "1");
-            else if (player_two_x == x && player_two_y == y)
+            else if (pos == player_pos[1])
                 fprintf(fp, "2");
-            else if (isWall(x, y))
+            else if (isWall(pos))
                 fprintf(fp, "#");
             else
                 fprintf(fp, " ");
@@ -53,67 +55,66 @@ void Map::sendMoveToServer(Direction move)
     fflush(stdout);
 }
 
-void Map::readFromFile(FILE *file_handle)
+bool Map::readFromFile(FILE *file_handle)
 {
-    int x, y, c;
+    int c;
     int num_items = fscanf(file_handle, "%d %d\n", &width, &height);
     if (feof(file_handle) || num_items < 2) {
-        exit(0); // End of stream means end of game. Just exit.
+        return false;
     }
     is_wall = std::vector<bool>(width*height, false);
-    x = 0;
-    y = 0;
-    while (y < height && (c = fgetc(file_handle)) != EOF) {
+    position pos(0, 0);
+    while (pos.y < height && (c = fgetc(file_handle)) != EOF) {
         switch (c) {
             case '\r':
                 break;
             case '\n':
-                if (x != width) {
+                if (pos.x != width) {
                     fprintf(stderr, "x != width in Board_ReadFromStream\n");
-                    return;
+                    return false;
                 }
-                ++y;
-                x = 0;
+                ++pos.y;
+                pos.x = 0;
                 break;
             case '#':
-                if (x >= width) {
+                if (pos.x >= width) {
                     fprintf(stderr, "x >= width in Board_ReadFromStream\n");
-                    return;
+                    return false;
                 }
-                is_wall[x*height + y] = true;
-                ++x;
+                is_wall[index(pos)] = true;
+                ++pos.x;
                 break;
             case ' ':
-                if (x >= width) {
+                if (pos.x >= width) {
                     fprintf(stderr, "x >= width in Board_ReadFromStream\n");
-                    return;
+                    return false;
                 }
-                is_wall[x*height + y] = false;
-                ++x;
+                is_wall[index(pos)] = false;
+                ++pos.x;
                 break;
             case '1':
-                if (x >= width) {
+                if (pos.x >= width) {
                     fprintf(stderr, "x >= width in Board_ReadFromStream\n");
-                    return;
+                    return false;
                 }
-                is_wall[x*height + y] = true;
-                player_one_x = x;
-                player_one_y = y;
-                ++x;
+                is_wall[index(pos)] = true;
+                player_pos[0] = pos;
+                ++pos.x;
                 break;
             case '2':
-                if (x >= width) {
+                if (pos.x >= width) {
                     fprintf(stderr, "x >= width in Board_ReadFromStream\n");
-                    return;
+                    return false;
                 }
-                is_wall[x*height + y] = true;
-                player_two_x = x;
-                player_two_y = y;
-                ++x;
+                is_wall[index(pos)] = true;
+                player_pos[1] = pos;
+                ++pos.x;
                 break;
             default:
                 fprintf(stderr, "unexpected character %d in Board_ReadFromStream", c);
-                return;
+                return false;
         }
     }
+
+    return true;
 }

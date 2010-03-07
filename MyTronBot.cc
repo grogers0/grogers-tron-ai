@@ -37,10 +37,8 @@ int main()
 {
     Map map;
 
-    while (true)
+    while (map.readFromFile(stdin))
     {
-        map.readFromFile(stdin);
-
         Direction dir = whichMove(map);
 
         Map::sendMoveToServer(dir);

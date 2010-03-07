@@ -8,9 +8,9 @@ bool isOpponentIsolated(const Map &map);
 Direction decideMoveIsolatedFromOpponent(Map map);
 int countReachableSquares(const Map &map, Player player);
 Direction decideMoveMinimax(Map);
-bool squaresReachEachOther(const std::vector<bool> &board, int x1, int y1,
-        int x2, int y2);
-void fillUnreachableSquares(std::vector<bool> &board, int x, int y);
-bool isCorridorSquare(const std::vector<bool> &board, int x, int y);
+bool squaresReachEachOther(const std::vector<bool> &board,
+        position pos1, position pos2);
+void fillUnreachableSquares(std::vector<bool> &board, position pos);
+bool isCorridorSquare(const std::vector<bool> &board, position pos);
 
 #endif
