@@ -44,7 +44,7 @@ int main()
 {
     Map map;
 
-    bool first_time;
+    bool first_time = true;
 
     signal(SIGALRM, &handle_sigalrm);
 
@@ -55,11 +55,10 @@ int main()
         itimerval itv;
         itv.it_interval.tv_sec = 0;
         itv.it_interval.tv_usec = 0;
-
         if (first_time) {
             first_time = false;
             itv.it_value.tv_sec = 2;
-            itv.it_value.tv_usec = 900000;
+            itv.it_value.tv_usec = 800000;
         } else {
             itv.it_value.tv_sec = 0;
             itv.it_value.tv_usec = 950000;

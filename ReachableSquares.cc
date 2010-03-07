@@ -98,10 +98,8 @@ bool isCorridorSquare(const std::vector<bool> &board, position pos)
         return true;
     if (board[index(pos.north().east())] && board[index(pos.south().west())])
         return true;
-    // hmmm, this was a bug in the old version but fixing the bug seems
-    // to make it dummer, so oh well...
-    //if (board[index(pos.north().west())] && board[index(pos.south().east())])
-        //return true;
+    if (board[index(pos.north().west())] && board[index(pos.south().east())])
+        return true;
 
     return false;
 }

@@ -11,7 +11,7 @@
 
 static const int INF = INT_MAX;
 
-typedef int (*HeuristicFunction)(const Map &map);
+static int heuristic(const Map &map);
 
 class GameTree
 {
@@ -19,27 +19,21 @@ class GameTree
         GameTree();
         ~GameTree();
 
-        Direction decideMove(Map &map, int depth, HeuristicFunction fun);
+        Direction decideMove(Map &map, int depth);
 
     private:
         struct Node;
-        bool buildTreeOneLevel(Node *node, Map &map, Player player);
-        int negamax_normal(Node *node, Map &map, int depth,
-                int alpha, int beta,
-                int sign, HeuristicFunction fun, Direction *dir);
-        int negamax_quiescence(Node *node, Map &map, int depth,
-                int alpha, int beta,
-                int sign, HeuristicFunction fun);
-        bool quiet(Node *node, Map &map, int sign, HeuristicFunction fun);
-        bool quiet_quiescence(Node *node, Map &map, int sign, HeuristicFunction fun);
+        bool buildTreeTwoLevels(Node *node, const Map &map);
+        int negamax(Node *node, Map &map, int depth,
+                int alpha, int beta, int sign, Direction *dir);
 
         struct Node
         {
             Node *children[4];
-            Direction direction;
+            Direction dir;
 
             Node(Direction dir);
-            void promoteChild(int i);
+            void promoteMove(int i);
         };
 
         Node *root;
@@ -67,37 +61,25 @@ static inline Player signToPlayer(int sign)
 }
 
 inline GameTree::Node::Node(Direction dir) :
-    direction(dir)
+    dir(dir)
 {
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 4; ++i) {
         children[i] = NULL;
-}
-
-inline void GameTree::Node::promoteChild(int i)
-{
-    switch (i) {
-        case 0:
-            return;
-        case 1:
-            std::swap(children[0], children[1]);
-            return;
-        case 2:
-            std::swap(children[1], children[2]);
-            std::swap(children[0], children[1]);
-            return;
-        case 3:
-            std::swap(children[2], children[3]);
-            std::swap(children[1], children[2]);
-            std::swap(children[0], children[1]);
-            return;
     }
 }
 
-Direction GameTree::decideMove(Map &map, int depth, HeuristicFunction fun)
+inline void GameTree::Node::promoteMove(int i)
+{
+    for (; i > 0; --i) {
+        std::swap(children[i], children[i - 1]);
+    }
+}
+
+Direction GameTree::decideMove(Map &map, int depth)
 {
     Direction bestDir = NORTH;
 
-    int alpha = negamax_normal(root, map, depth, -INF, INF, 1, fun, &bestDir);
+    int alpha = negamax(root, map, depth, -INF, INF, 1, &bestDir);
 
     fprintf(stderr, "depth: %d, dir: %s, alpha: %d\n", depth, dirToString(bestDir), alpha);
 
@@ -110,7 +92,7 @@ Direction GameTree::decideMove(Map &map, int depth, HeuristicFunction fun)
 }
 
 // returns true if node is NOT a terminal node (ie the tree was built)
-bool GameTree::buildTreeOneLevel(Node *node, Map &map, Player player)
+bool GameTree::buildTreeTwoLevels(Node *node, const Map &map)
 {
     if (map.my_pos() == map.enemy_pos())
         return false;
@@ -118,128 +100,68 @@ bool GameTree::buildTreeOneLevel(Node *node, Map &map, Player player)
     if (time_expired)
         throw std::runtime_error("time expired for move decision");
 
-    int cnt = 0;
-    for (Direction dir = DIR_MIN; dir <= DIR_MAX;
-            dir = static_cast<Direction>(dir + 1)) {
-        if (map.isWall(dir, player))
+    if (map.cntMoves(SELF) == 0 || map.cntMoves(ENEMY) == 0)
+        return false;
+
+    int i = 0, j;
+    for (Direction myDir = DIR_MIN; myDir <= DIR_MAX;
+            myDir = static_cast<Direction>(myDir + 1)) {
+        if (map.isWall(myDir, SELF))
             continue;
 
-        nodesAlloc.push_back(Node(dir));
+        nodesAlloc.push_back(Node(myDir));
+        node->children[i] = &nodesAlloc.back();
 
-        node->children[cnt] = &nodesAlloc.back();
+        j = 0;
+        for (Direction enemyDir = DIR_MIN; enemyDir <= DIR_MAX;
+            enemyDir = static_cast<Direction>(enemyDir + 1)) {
+            if (map.isWall(enemyDir, ENEMY))
+                continue;
 
-        ++cnt;
-    }
+            nodesAlloc.push_back(Node(enemyDir));
+            node->children[i]->children[j] = &nodesAlloc.back();
 
-    return cnt > 0;
-}
-
-bool GameTree::quiet(Node *node, Map &map, int sign, HeuristicFunction fun)
-{
-    // if we are isolated, the evaluation is likely to be stable (as long as we count the reachable moves correctly)
-    if (isOpponentIsolated(map))
-        return true;
-
-    //int a1 = sign * fun(map);
-    //int a2 = negamax_quiescence(node, map, 1, -INF, INF, sign, fun);
-//
-    //if (abs(a1 - a2) <= 4)
-        //return true;
-
-    return false;
-}
-
-bool GameTree::quiet_quiescence(Node *node, Map &map, int sign, HeuristicFunction fun)
-{
-    if (isOpponentIsolated(map))
-        return true;
-
-    return false;
-}
-
-int GameTree::negamax_quiescence(Node *node, Map &map, int depth,
-        int alpha, int beta, int sign, HeuristicFunction fun)
-{
-    if (time_expired)
-        throw std::runtime_error("time expired for move decision");
-
-    if (node->children[0] == NULL) {
-        if (!buildTreeOneLevel(node, map, signToPlayer(sign)))
-            return sign * fun(map);
-    }
-
-    if (depth == 0 || (depth%2 == 0 && quiet_quiescence(node, map, sign, fun))) {
-        return sign * fun(map);
-    }
-
-    // singularity enhancement - if only one possible move, don't let it count
-    // towards the depth
-    int newdepth = depth - 1;
-    if (!node->children[1])
-        newdepth = depth;
-
-    for (int i = 0; i < 4 && node->children[i]; ++i) {
-        Direction dir = node->children[i]->direction;
-
-        map.move(dir, signToPlayer(sign));
-        int a = -negamax_quiescence(node->children[i], map, newdepth,
-                -beta, -alpha, -sign, fun);
-        map.unmove(dir, signToPlayer(sign));
-
-        if (a > alpha) {
-            node->promoteChild(i);
-            alpha = a;
+            ++j;
         }
 
-        if (alpha >= beta)
-            break;
+        ++i;
     }
 
-    return alpha;
+    return true;
 }
 
-int GameTree::negamax_normal(Node *node, Map &map, int depth,
-        int alpha, int beta,
-        int sign, HeuristicFunction fun, Direction *bestDir)
+int GameTree::negamax(Node *node, Map &map, int depth,
+        int alpha, int beta, int sign, Direction *bestDir)
 {
     if (time_expired)
         throw std::runtime_error("time expired for move decision");
 
     if (node->children[0] == NULL) {
-        if (!buildTreeOneLevel(node, map, signToPlayer(sign)))
-            return sign * fun(map);
+        if (!buildTreeTwoLevels(node, map)) {
+            return sign * heuristic(map);
+        }
     }
 
-    if (depth == 0) {
-        if (quiet(node, map, sign, fun))
-            return sign * fun(map);
-        else
-            return negamax_quiescence(node, map, 6, alpha, beta, sign, fun);
-    }
-
-    // singularity enhancement - if only one possible move, don't let it count
-    // towards the depth
-    int newdepth = depth - 1;
-    if (!node->children[1])
-        newdepth = depth;
+    if (depth == 0)
+        return sign * heuristic(map);
 
     for (int i = 0; i < 4 && node->children[i]; ++i) {
-        Direction dir = node->children[i]->direction;
+        Direction dir = node->children[i]->dir;
 
         map.move(dir, signToPlayer(sign));
-        int a = -negamax_normal(node->children[i], map, newdepth,
-                -beta, -alpha, -sign, fun, NULL);
+        int a = -negamax(node->children[i], map, depth - 1, -beta, -alpha, -sign, NULL);
         map.unmove(dir, signToPlayer(sign));
 
         if (a > alpha) {
+            alpha = a;
+
             if (bestDir)
                 *bestDir = dir;
 
-            node->promoteChild(i);
-            alpha = a;
+            node->promoteMove(i);
         }
 
-        if (alpha >= beta)
+        if (alpha >= beta) // beta cutoff
             break;
     }
 
@@ -402,7 +324,7 @@ static int countCorridorSquares(const Map &map)
     return cnt;
 }
 
-static int fitness(const Map &map)
+static int heuristic(const Map &map)
 {
     if (map.my_pos() == map.enemy_pos())
         return 0; // draw
@@ -421,11 +343,10 @@ static int fitness(const Map &map)
     if (isOpponentIsolated(map)) {
         int cntPlayer = countReachableSquares(map, SELF);
         int cntEnemy = countReachableSquares(map, ENEMY);
-        return (cntPlayer - cntEnemy)*2;
+        return cntPlayer - cntEnemy;
     } else {
         int voronoi = voronoiTerritory(map);
-        int corridors = countCorridorSquares(map);
-        return voronoi*2 - corridors;
+        return voronoi;
     }
 }
 
@@ -435,8 +356,8 @@ Direction decideMoveMinimax(Map map)
 
     Direction dir = NORTH;
     try {
-        for (int depth = 2; depth < 100; depth += 2) {
-            dir = tree.decideMove(map, depth, &fitness);
+        for (int depth = 2; depth < 100; depth += 2) { // fixme
+            dir = tree.decideMove(map, depth);
             fprintf(stderr, "Depth %d ==> %s\n", depth, dirToString(dir));
         }
     } catch (...) {

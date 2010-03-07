@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <stdint.h>
 
 #include "position.h"
 
@@ -35,14 +36,17 @@ int index(position p)
     return p.x * height + p.y;
 }
 
+void zobrist_init();
+typedef uint64_t HASH_TYPE;
+
 class Map
 {
     public:
         bool isWall(position) const;
         bool isWall(Direction dir, Player p) const;
 
-        void move(Direction dir, Player p);
-        void unmove(Direction dir, Player p);
+        void move(Direction myDir, Player p);
+        void unmove(Direction myDir, Player p);
 
         int cntMoves(Player p) const;
 
@@ -52,6 +56,8 @@ class Map
 
         position my_pos() const;
         position enemy_pos() const;
+
+        int hash() const;
 
         // Load a board from an open file handle. To read from the console,
         // pass stdin, which is actually a (FILE*).  file_handle -- an open
@@ -78,6 +84,7 @@ class Map
         std::vector<bool> is_wall;
 
         position player_pos[2];
+        HASH_TYPE current_hash;
 };
 
 // Returns whether or not the given cell is a wall or not. TRUE means it's
@@ -113,59 +120,7 @@ bool Map::isWall(Direction dir, Player p) const
     }
 }
 
-inline
-void Map::move(Direction dir, Player p)
-{
-    position *pos;
-    switch (p) {
-        case SELF: pos = &player_pos[0]; break;
-        case ENEMY: pos = &player_pos[1]; break;
-        default: return;
-    }
 
-    is_wall[index(*pos)] = true;
-
-    switch (dir) {
-        case NORTH: pos->y--; break;
-        case SOUTH: pos->y++; break;
-        case WEST: pos->x--; break;
-        case EAST: pos->x++; break;
-        default: return;
-    }
-
-    if (p != SELF) {
-        is_wall[index(player_pos[0])] = true;
-        is_wall[index(player_pos[1])] = true;
-    }
-}
-
-
-inline
-void Map::unmove(Direction dir, Player p)
-{
-    position *pos;
-    switch (p) {
-        case SELF: pos = &player_pos[0]; break;
-        case ENEMY: pos = &player_pos[1]; break;
-        default: return;
-    }
-
-    is_wall[index(*pos)] = false;
-
-    // unmove is backwards the regular move...
-    switch (dir) {
-        case NORTH: pos->y++; break;
-        case SOUTH: pos->y--; break;
-        case WEST: pos->x++; break;
-        case EAST: pos->x--; break;
-        default: return;
-    }
-
-    if (p != SELF) {
-        is_wall[index(player_pos[0])] = false;
-        is_wall[index(player_pos[1])] = false;
-    }
-}
 
 inline
 int Map::cntMoves(Player p) const
@@ -210,6 +165,11 @@ inline
 position Map::enemy_pos() const
 {
     return player_pos[1];
+}
+
+inline int Map::hash() const
+{
+    return current_hash;
 }
 
 #endif
