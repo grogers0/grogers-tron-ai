@@ -1,5 +1,4 @@
 #include "MoveDeciders.h"
-#include "Time.h"
 
 #include <cstdio>
 #include <stdexcept>
@@ -53,7 +52,7 @@ bool isOpponentIsolated(const Map &map)
 
 static std::pair<int, int> isolatedPathFind(Map &map, int truedepth, int depth, Direction *outDir)
 {
-    if (Time::now() > deadline)
+    if (time_expired)
         throw std::runtime_error("time expired");
 
     if (depth <= 0)

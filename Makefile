@@ -9,7 +9,7 @@ LINKFLAGS=
 
 all: MyTronBot
 
-OBJECTS = Map.o OpponentIsolated.o ReachableSquares.o GameTree.o Time.o
+OBJECTS = Map.o OpponentIsolated.o ReachableSquares.o GameTree.o
 
 MyTronBot: ${OBJECTS} MyTronBot.o
 	g++ ${CXXFLAGS} -o MyTronBot ${OBJECTS} MyTronBot.o ${LINKFLAGS}

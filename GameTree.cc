@@ -1,5 +1,4 @@
 #include "MoveDeciders.h"
-#include "Time.h"
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
@@ -116,7 +115,7 @@ bool GameTree::buildTreeOneLevel(Node *node, Map &map, Player player)
     if (map.my_pos() == map.enemy_pos())
         return false;
 
-    if (Time::now() > deadline)
+    if (time_expired)
         throw std::runtime_error("time expired for move decision");
 
     int cnt = 0;
@@ -161,7 +160,7 @@ bool GameTree::quiet_quiescence(Node *node, Map &map, int sign, HeuristicFunctio
 int GameTree::negamax_quiescence(Node *node, Map &map, int depth,
         int alpha, int beta, int sign, HeuristicFunction fun)
 {
-    if (Time::now() > deadline)
+    if (time_expired)
         throw std::runtime_error("time expired for move decision");
 
     if (node->children[0] == NULL) {
@@ -203,7 +202,7 @@ int GameTree::negamax_normal(Node *node, Map &map, int depth,
         int alpha, int beta,
         int sign, HeuristicFunction fun, Direction *bestDir)
 {
-    if (Time::now() > deadline)
+    if (time_expired)
         throw std::runtime_error("time expired for move decision");
 
     if (node->children[0] == NULL) {

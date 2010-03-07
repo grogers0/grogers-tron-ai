@@ -2,7 +2,8 @@
 #define MOVE_DECIDERS_H
 
 #include "Map.h"
-#include <set>
+
+extern volatile bool time_expired;
 
 bool isOpponentIsolated(const Map &map);
 Direction decideMoveIsolatedFromOpponent(Map map);
