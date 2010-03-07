@@ -11,7 +11,7 @@
 
 volatile bool time_expired;
 
-Direction whichMove(const Map& map)
+Direction decide_move(const Map &map)
 {
     if (isOpponentIsolated(map)) {
         return decideMoveIsolatedFromOpponent(map);
@@ -24,6 +24,21 @@ void handle_sigalrm(int)
 {
     time_expired = true;
 }
+
+void send_move(Direction move)
+{
+    int m = 0;
+    switch (move) {
+        case NORTH: m = 1; break;
+        case EAST: m = 2; break;
+        case SOUTH: m = 3; break;
+        case WEST: m = 4; break;
+    }
+    fprintf(stdout, "%d\n", m);
+    fflush(stdout);
+}
+
+
 
 int main()
 {
@@ -51,9 +66,7 @@ int main()
         }
         setitimer(ITIMER_REAL, &itv, NULL);
 
-        Direction dir = whichMove(map);
-
-        Map::sendMoveToServer(dir);
+        send_move(decide_move(map));
     }
     return 0;
 }

@@ -8,12 +8,13 @@
 
 enum Direction
 {
-    NORTH = 1, // negative y direction
-    EAST = 2, // positive x direction
-    SOUTH = 3, // positive y direction
-    WEST = 4, // negative x direction
+    NORTH,
+    SOUTH,
+    WEST,
+    EAST,
+
     DIR_MIN = NORTH,
-    DIR_MAX = WEST
+    DIR_MAX = EAST
 };
 
 const char *dirToString(Direction dir);
@@ -23,14 +24,6 @@ enum Player
     SELF,
     ENEMY
 };
-
-inline Player otherPlayer(Player p)
-{
-    if (p == SELF)
-        return ENEMY;
-    else
-        return SELF;
-}
 
 const char *playerToString(Player p);
 
@@ -59,13 +52,6 @@ class Map
 
         position my_pos() const;
         position enemy_pos() const;
-
-        // Sends your move to the contest engine. The four possible moves are
-        //   * 1 -- North. Negative Y direction.
-        //   * 2 -- East. Positive X direction.
-        //   * 3 -- South. Positive X direction.
-        //   * 4 -- West. Negative X direction.
-        static void sendMoveToServer(Direction move);
 
         // Load a board from an open file handle. To read from the console,
         // pass stdin, which is actually a (FILE*).  file_handle -- an open

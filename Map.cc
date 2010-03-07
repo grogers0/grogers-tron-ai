@@ -49,12 +49,6 @@ void Map::print(FILE *fp) const
     }
 }
 
-void Map::sendMoveToServer(Direction move)
-{
-    fprintf(stdout, "%d\n", move);
-    fflush(stdout);
-}
-
 bool Map::readFromFile(FILE *file_handle)
 {
     int c;
