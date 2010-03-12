@@ -24,7 +24,7 @@ class GameTree
     private:
         struct Node;
         bool buildTreeTwoLevels(Node *node, const Map &map);
-        int negamax(Node *node, Map &map, int depth,
+        int negascout(Node *node, Map &map, int depth,
                 int alpha, int beta, int sign, Direction *dir);
 
         struct Node
@@ -79,7 +79,7 @@ Direction GameTree::decideMove(Map &map, int depth)
 {
     Direction bestDir = NORTH;
 
-    int alpha = negamax(root, map, depth, -INF, INF, 1, &bestDir);
+    int alpha = negascout(root, map, depth, -INF, INF, 1, &bestDir);
 
     fprintf(stderr, "depth: %d, dir: %s, alpha: %d\n", depth, dirToString(bestDir), alpha);
 
@@ -130,7 +130,7 @@ bool GameTree::buildTreeTwoLevels(Node *node, const Map &map)
     return true;
 }
 
-int GameTree::negamax(Node *node, Map &map, int depth,
+int GameTree::negascout(Node *node, Map &map, int depth,
         int alpha, int beta, int sign, Direction *bestDir)
 {
     if (time_expired)
@@ -145,11 +145,12 @@ int GameTree::negamax(Node *node, Map &map, int depth,
     if (depth == 0)
         return sign * heuristic(map);
 
+    int b = beta;
     for (int i = 0; i < 4 && node->children[i]; ++i) {
         Direction dir = node->children[i]->dir;
 
         map.move(dir, signToPlayer(sign));
-        int a = -negamax(node->children[i], map, depth - 1, -beta, -alpha, -sign, NULL);
+        int a = -negascout(node->children[i], map, depth - 1, -b, -alpha, -sign, NULL);
         map.unmove(dir, signToPlayer(sign));
 
         if (a > alpha) {
@@ -163,6 +164,21 @@ int GameTree::negamax(Node *node, Map &map, int depth,
 
         if (alpha >= beta) // beta cutoff
             break;
+
+        // negascout additions start
+        if (alpha >= b) { // null window check
+            map.move(dir, signToPlayer(sign));
+            // note: to reach here we must have improved alpha, so we would have
+            // promoted the child to position 0
+            alpha = -negascout(node->children[0], map, depth - 1, -beta, -alpha, -sign, NULL);
+            map.unmove(dir, signToPlayer(sign));
+
+            if (alpha >= beta) // beta cutoff
+                break;
+        }
+
+        b = alpha + 1;
+        // negascout additions end
     }
 
     return alpha;
