@@ -39,6 +39,25 @@ int index(position p)
 void zobrist_init();
 typedef uint64_t HASH_TYPE;
 
+const int TRANSPOSITION_TABLE_SIZE = 1 * 1024 * 1024;
+
+class TranspositionTable
+{
+    public:
+        struct Entry
+        {
+            int heuristic;
+        };
+
+        const Entry *get(HASH_TYPE hash);
+        void set(HASH_TYPE, const Entry &entry);
+
+    private:
+        std::pair<HASH_TYPE, Entry> data[TRANSPOSITION_TABLE_SIZE];
+};
+
+extern TranspositionTable trans_table;
+
 class Map
 {
     public:
@@ -57,7 +76,7 @@ class Map
         position my_pos() const;
         position enemy_pos() const;
 
-        int hash() const;
+        HASH_TYPE hash() const;
 
         // Load a board from an open file handle. To read from the console,
         // pass stdin, which is actually a (FILE*).  file_handle -- an open
@@ -167,7 +186,7 @@ position Map::enemy_pos() const
     return player_pos[1];
 }
 
-inline int Map::hash() const
+inline HASH_TYPE Map::hash() const
 {
     return current_hash;
 }

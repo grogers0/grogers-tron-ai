@@ -53,6 +53,23 @@ void zobrist_init()
     close(fd);
 }
 
+TranspositionTable trans_table;
+
+const TranspositionTable::Entry *TranspositionTable::get(HASH_TYPE hash)
+{
+    if (data[hash % TRANSPOSITION_TABLE_SIZE].first == hash)
+        return &data[hash % TRANSPOSITION_TABLE_SIZE].second;
+    else
+        return NULL;
+}
+
+void TranspositionTable::set(HASH_TYPE hash, const Entry &entry)
+{
+    data[hash % TRANSPOSITION_TABLE_SIZE].first = hash;
+    data[hash % TRANSPOSITION_TABLE_SIZE].second = entry;
+}
+
+
 void Map::move(Direction dir, Player p)
 {
     position currpos, nextpos;

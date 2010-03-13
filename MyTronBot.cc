@@ -58,7 +58,7 @@ int main()
         if (first_time) {
             first_time = false;
             itv.it_value.tv_sec = 2;
-            itv.it_value.tv_usec = 800000;
+            itv.it_value.tv_usec = 500000;
         } else {
             itv.it_value.tv_sec = 0;
             itv.it_value.tv_usec = 950000;

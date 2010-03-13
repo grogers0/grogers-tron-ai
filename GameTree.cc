@@ -355,15 +355,30 @@ static int heuristic(const Map &map)
     if (!playerMoves && !enemyMoves)
         return 0; // draw
 
+    // ending moves detect in constant time so don't bother yet to waste
+    // space in the transposition table for them
 
+    {
+        const TranspositionTable::Entry *entry = trans_table.get(map.hash());
+        if (entry)
+            return entry->heuristic;
+    }
+
+    int ret;
     if (isOpponentIsolated(map)) {
         int cntPlayer = countReachableSquares(map, SELF);
         int cntEnemy = countReachableSquares(map, ENEMY);
-        return cntPlayer - cntEnemy;
+        ret = cntPlayer - cntEnemy;
     } else {
         int voronoi = voronoiTerritory(map);
-        return voronoi;
+        ret = voronoi;
     }
+
+    TranspositionTable::Entry entry;
+    entry.heuristic = ret;
+
+    trans_table.set(map.hash(), entry);
+    return ret;
 }
 
 Direction decideMoveMinimax(Map map)
